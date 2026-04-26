@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { loadConfig } from "../src/config/env.js";
 import type { ScreeningRequest } from "../src/domain/types.js";
 import { buildApp } from "../src/http/app.js";
+import { InMemoryRepository } from "../src/infra/repository.js";
 import type { LLMClient } from "../src/services/llmClient.js";
 
 const fakeLlmClient: LLMClient = {
@@ -22,6 +23,7 @@ async function makeApp() {
       jwtSecret: "test-secret",
       cookieSecure: false
     }),
+    repo: new InMemoryRepository({ seedDemoData: true }),
     llmClient: fakeLlmClient
   });
 }

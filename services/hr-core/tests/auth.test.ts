@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { loadConfig } from "../src/config/env.js";
 import { buildApp } from "../src/http/app.js";
+import { InMemoryRepository } from "../src/infra/repository.js";
 
 async function makeApp() {
   const app = await buildApp({
@@ -8,7 +9,8 @@ async function makeApp() {
       inviteCode: "TEST-INVITE-CODE",
       jwtSecret: "test-secret",
       cookieSecure: false
-    })
+    }),
+    repo: new InMemoryRepository({ seedDemoData: true })
   });
   return app;
 }
@@ -90,5 +92,12 @@ describe("auth", () => {
     expect((await register(app, "dup@example.com", "dup_login")).statusCode).toBe(201);
     expect((await register(app, "dup@example.com", "other_login")).statusCode).toBe(409);
     expect((await register(app, "other@example.com", "dup_login")).statusCode).toBe(409);
+  });
+
+  it("works with an injected in-memory repository for tests", async () => {
+    const app = await makeApp();
+    const registered = await register(app, "persist@example.com", "persist_hr");
+
+    expect(registered.statusCode).toBe(201);
   });
 });

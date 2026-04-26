@@ -2,6 +2,7 @@ import cookie from "@fastify/cookie";
 import swagger from "@fastify/swagger";
 import swaggerUi from "@fastify/swagger-ui";
 import Fastify, { type FastifyReply, type FastifyRequest } from "fastify";
+import { Pool } from "pg";
 import { ZodError } from "zod";
 import type { AppConfig } from "../config/env.js";
 import { AppError } from "../domain/errors.js";
@@ -14,7 +15,7 @@ import {
   vacancyCreateSchema
 } from "../domain/schemas.js";
 import { applicationStages, candidateTones, type HRUser } from "../domain/types.js";
-import { InMemoryRepository } from "../infra/repository.js";
+import { InMemoryRepository, PostgresRepository, type Repository } from "../infra/repository.js";
 import { ApplicationService } from "../services/applicationService.js";
 import { AuthService } from "../services/authService.js";
 import { HttpLLMClient, type LLMClient } from "../services/llmClient.js";
@@ -218,13 +219,20 @@ const applicationParamsSchema = {
 
 export type BuildAppOptions = {
   config: AppConfig;
-  repo?: InMemoryRepository;
+  repo?: Repository;
   llmClient?: LLMClient;
 };
 
 export async function buildApp(options: BuildAppOptions) {
   const app = Fastify({ logger: false });
-  const repo = options.repo ?? new InMemoryRepository();
+  const repo =
+    options.repo ??
+    new PostgresRepository(
+      new Pool({
+        connectionString: options.config.databaseUrl
+      })
+    );
+  await repo.initialize();
   const authService = new AuthService(repo, options.config);
   const llmClient = options.llmClient ?? new HttpLLMClient(options.config);
   const applicationService = new ApplicationService(repo, llmClient);
@@ -264,7 +272,7 @@ export async function buildApp(options: BuildAppOptions) {
   });
 
   async function requireAuth(request: FastifyRequest, _reply: FastifyReply) {
-    request.currentUser = authService.getUserFromToken(request.cookies[authService.cookieName()]);
+    request.currentUser = await authService.getUserFromToken(request.cookies[authService.cookieName()]);
   }
 
   app.get(
@@ -364,7 +372,7 @@ export async function buildApp(options: BuildAppOptions) {
     },
     async (request, reply) => {
     const payload = vacancyCreateSchema.parse(request.body);
-    const vacancy = repo.createVacancy({
+    const vacancy = await repo.createVacancy({
       title: payload.title,
       location: payload.location,
       role: payload.role,
@@ -394,7 +402,7 @@ export async function buildApp(options: BuildAppOptions) {
     const query = request.query as { limit?: string; offset?: string };
     const limit = Math.min(Math.max(Number(query.limit ?? "50"), 1), 100);
     const offset = Math.max(Number(query.offset ?? "0"), 0);
-    return repo.listVacancies(limit, offset).map(presentVacancy);
+    return (await repo.listVacancies(limit, offset)).map(presentVacancy);
     }
   );
 
@@ -411,7 +419,7 @@ export async function buildApp(options: BuildAppOptions) {
     },
     async (request) => {
     const { vacancyId } = request.params as { vacancyId: string };
-    const vacancy = repo.findVacancyById(vacancyId);
+    const vacancy = await repo.findVacancyById(vacancyId);
     if (!vacancy) throw new AppError(404, "Vacancy not found");
     return presentVacancy(vacancy);
     }
@@ -452,7 +460,7 @@ export async function buildApp(options: BuildAppOptions) {
     },
     async (request) => {
     const { applicationId } = request.params as { applicationId: string };
-    const application = repo.findApplicationById(applicationId);
+    const application = await repo.findApplicationById(applicationId);
     if (!application) throw new AppError(404, "Application not found");
     return presentApplication(application);
     }
@@ -473,7 +481,7 @@ export async function buildApp(options: BuildAppOptions) {
     async (request) => {
     const { applicationId } = request.params as { applicationId: string };
     const payload = answersUpdateSchema.parse(request.body);
-    const application = repo.updateApplication(applicationId, {
+    const application = await repo.updateApplication(applicationId, {
       answers: payload.answers,
       stage: "in_review"
     });
@@ -497,7 +505,7 @@ export async function buildApp(options: BuildAppOptions) {
     async (request) => {
     const { applicationId } = request.params as { applicationId: string };
     const payload = stageUpdateSchema.parse(request.body);
-    const application = repo.updateApplication(applicationId, { stage: payload.stage });
+    const application = await repo.updateApplication(applicationId, { stage: payload.stage });
     if (!application) throw new AppError(404, "Application not found");
     return presentApplication(application);
     }

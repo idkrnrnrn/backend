@@ -3,7 +3,7 @@ import jwt from "jsonwebtoken";
 import type { AppConfig } from "../config/env.js";
 import { AppError } from "../domain/errors.js";
 import { ACCESS_COOKIE_NAME, type HRUser } from "../domain/types.js";
-import type { InMemoryRepository } from "../infra/repository.js";
+import type { Repository } from "../infra/repository.js";
 
 type JwtPayload = {
   sub: string;
@@ -11,7 +11,7 @@ type JwtPayload = {
 
 export class AuthService {
   constructor(
-    private readonly repo: InMemoryRepository,
+    private readonly repo: Repository,
     private readonly config: AppConfig
   ) {}
 
@@ -20,12 +20,12 @@ export class AuthService {
       throw new AppError(403, "Invalid invitation code");
     }
 
-    if (this.repo.findUserByEmail(input.email) || this.repo.findUserByLogin(input.login)) {
+    if ((await this.repo.findUserByEmail(input.email)) || (await this.repo.findUserByLogin(input.login))) {
       throw new AppError(409, "User with this email or login already exists");
     }
 
     const passwordHash = await bcrypt.hash(input.password, 12);
-    return this.repo.createUser({
+    return await this.repo.createUser({
       email: input.email,
       login: input.login,
       passwordHash
@@ -33,7 +33,7 @@ export class AuthService {
   }
 
   async authenticate(input: { email: string; password: string }): Promise<HRUser> {
-    const user = this.repo.findUserByEmail(input.email);
+    const user = await this.repo.findUserByEmail(input.email);
     if (!user || !(await bcrypt.compare(input.password, user.passwordHash))) {
       throw new AppError(401, "Invalid email or password");
     }
@@ -46,14 +46,14 @@ export class AuthService {
     });
   }
 
-  getUserFromToken(token: string | undefined): HRUser {
+  async getUserFromToken(token: string | undefined): Promise<HRUser> {
     if (!token) {
       throw new AppError(401, "Not authenticated");
     }
 
     try {
       const payload = jwt.verify(token, this.config.jwtSecret) as JwtPayload;
-      const user = this.repo.findUserById(payload.sub);
+      const user = await this.repo.findUserById(payload.sub);
       if (!user) {
         throw new AppError(401, "User not found");
       }

@@ -31,6 +31,8 @@ Then open:
 
 Default invite code (for local): `HR-INVITE-2026`.
 
+Data is persisted in PostgreSQL. In Docker Compose the database is mounted to a named volume, so users, vacancies, and applications survive container restarts.
+
 ## Demo data
 
 `hr-core` starts with preloaded demo data in the in-memory repository:

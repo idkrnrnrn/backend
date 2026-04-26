@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { loadConfig } from "../src/config/env.js";
 import { buildApp } from "../src/http/app.js";
+import { InMemoryRepository } from "../src/infra/repository.js";
 
 describe("OpenAPI docs", () => {
   it("exposes request bodies, params, query and cookie auth in Swagger", async () => {
@@ -9,7 +10,8 @@ describe("OpenAPI docs", () => {
         inviteCode: "TEST-INVITE-CODE",
         jwtSecret: "test-secret",
         cookieSecure: false
-      })
+      }),
+      repo: new InMemoryRepository({ seedDemoData: true })
     });
     await app.ready();
 

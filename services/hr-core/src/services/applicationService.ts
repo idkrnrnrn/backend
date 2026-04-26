@@ -1,11 +1,11 @@
 import { AppError } from "../domain/errors.js";
 import type { Application } from "../domain/types.js";
-import type { InMemoryRepository } from "../infra/repository.js";
+import type { Repository } from "../infra/repository.js";
 import type { LLMClient } from "./llmClient.js";
 
 export class ApplicationService {
   constructor(
-    private readonly repo: InMemoryRepository,
+    private readonly repo: Repository,
     private readonly llmClient: LLMClient
   ) {}
 
@@ -14,7 +14,7 @@ export class ApplicationService {
     candidateEmail: string;
     resumeText: string;
   }): Promise<Application> {
-    const vacancy = this.repo.findVacancyById(input.vacancyId);
+    const vacancy = await this.repo.findVacancyById(input.vacancyId);
     if (!vacancy) {
       throw new AppError(404, "Vacancy not found");
     }
@@ -25,7 +25,7 @@ export class ApplicationService {
       optionalRequirements: vacancy.optionalRequirements
     });
 
-    return this.repo.createApplication({
+    return await this.repo.createApplication({
       vacancyId: input.vacancyId,
       candidateEmail: input.candidateEmail,
       stage: "questions_sent",
