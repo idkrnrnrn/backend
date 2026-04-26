@@ -68,7 +68,7 @@ export class AuthService {
     return {
       httpOnly: true,
       secure: this.config.cookieSecure,
-      sameSite: "lax" as const,
+      sameSite: this.config.cookieSecure ? ("none" as const) : ("lax" as const),
       path: "/",
       maxAge: this.config.jwtExpiresInSeconds
     };

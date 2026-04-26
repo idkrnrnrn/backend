@@ -14,8 +14,8 @@ import type {
 
 const prepareScreeningResponseSchema = z
   .object({
-    profile: z.record(z.unknown()).nullable().optional(),
-    candidateProfile: z.record(z.unknown()).nullable().optional(),
+    profile: z.record(z.string(), z.unknown()).nullable().optional(),
+    candidateProfile: z.record(z.string(), z.unknown()).nullable().optional(),
     questions: z.array(z.unknown()).optional(),
     screeningQuestions: z.array(z.unknown()).optional()
   })
@@ -23,8 +23,8 @@ const prepareScreeningResponseSchema = z
 
 const rankCandidateResponseSchema = z
   .object({
-    signals: z.record(z.unknown()).optional().default({}),
-    rankResult: z.record(z.unknown()).optional().default({})
+    signals: z.record(z.string(), z.unknown()).optional().default({}),
+    rankResult: z.record(z.string(), z.unknown()).optional().default({})
   })
   .passthrough();
 
