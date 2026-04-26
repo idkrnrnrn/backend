@@ -53,7 +53,7 @@
 - AuthN/AuthZ
 - Rate limiting
 - Request routing
-2. **hr-core service** (implemented skeleton)
+2. **hr-core service** (implemented TypeScript skeleton)
 - HR authentication
 - Vacancy catalog (shared for all authenticated HR)
 - Applications state machine
@@ -69,7 +69,7 @@
 
 ## Data and reliability patterns
 
-- PostgreSQL as source of truth (partitioning + read replicas)
+- PostgreSQL as production source of truth (partitioning + read replicas)
 - Redis for cache and short-lived state
 - Kafka for async events (`application.created`, `screening.completed`)
 - Outbox pattern for exactly-once-ish event publication

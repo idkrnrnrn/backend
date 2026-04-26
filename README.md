@@ -1,6 +1,6 @@
 # HR Cloud-Native Platform
 
-Production-oriented skeleton of a high-load HR platform with modular microservices in Python.
+Production-oriented skeleton of a high-load HR platform in TypeScript.
 
 ## Services
 
@@ -42,6 +42,7 @@ Default invite code (for local): `HR-INVITE-2026`.
 ## Tests
 
 ```bash
-python3 -m pip install -r requirements-dev.txt
-python3 -m pytest -c tests/pytest.ini tests
+cd services/hr-core
+npm install
+npm test
 ```

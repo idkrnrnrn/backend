@@ -22,6 +22,10 @@ build/
 dist/
 *.egg-info/
 
+# Node.js
+node_modules/
+npm-debug.log*
+
 # Local env/config
 .env
 .env.*

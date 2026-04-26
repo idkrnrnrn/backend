@@ -13,7 +13,7 @@
 - retry + dead-letter queues
 
 4. Strengthen data layer:
-- PostgreSQL migrations (Alembic)
+- PostgreSQL migrations (Prisma, Drizzle, or node-pg-migrate)
 - read replicas for heavy recruiter dashboards
 - partition `applications` by month/tenant
 
