@@ -6,6 +6,9 @@ services:
     environment:
       HR_DATABASE_URL: postgresql+psycopg://postgres:postgres@postgres:5432/hr
       HR_LLM_BASE_URL: http://llm-screening:8001
+      HR_INVITE_CODE: HR-INVITE-2026
+      HR_JWT_SECRET: local-dev-secret
+      HR_COOKIE_SECURE: "false"
     ports:
       - "8888:8000"
     depends_on:

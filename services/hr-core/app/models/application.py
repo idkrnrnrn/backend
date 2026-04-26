@@ -12,6 +12,8 @@ from app.db.session import Base
 class ApplicationStage(StrEnum):
     NEW = "new"
     QUESTIONS_SENT = "questions_sent"
+    CHAT_NOT_JOINED = "chat_not_joined"
+    QUESTIONS_UNANSWERED = "questions_unanswered"
     IN_REVIEW = "in_review"
     INTERVIEW = "interview"
     REJECTED = "rejected"

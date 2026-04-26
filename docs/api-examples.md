@@ -1,10 +1,35 @@
 # API examples
 
-## Create vacancy
+## Register HR
+
+```bash
+curl -X POST http://localhost:8888/api/v1/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "hr@example.com",
+    "login": "hr_lead",
+    "password": "StrongPass123",
+    "invite_code": "HR-INVITE-2026"
+  }'
+```
+
+## Login HR (JWT cookie)
+
+```bash
+curl -i -X POST http://localhost:8888/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "hr@example.com",
+    "password": "StrongPass123"
+  }'
+```
+
+## Create vacancy (requires auth cookie)
 
 ```bash
 curl -X POST http://localhost:8888/api/v1/vacancies \
   -H "Content-Type: application/json" \
+  -H "Cookie: hr_access_token=<JWT>" \
   -d '{
     "title": "Senior Python Engineer",
     "location": "Remote, EU",
@@ -23,6 +48,7 @@ curl -X POST http://localhost:8888/api/v1/vacancies \
 ```bash
 curl -X POST http://localhost:8888/api/v1/applications \
   -H "Content-Type: application/json" \
+  -H "Cookie: hr_access_token=<JWT>" \
   -d '{
     "vacancy_id": "<VACANCY_ID>",
     "candidate_email": "candidate@example.com",
@@ -43,6 +69,7 @@ Response includes:
 ```bash
 curl -X PATCH http://localhost:8888/api/v1/applications/<APPLICATION_ID>/answers \
   -H "Content-Type: application/json" \
+  -H "Cookie: hr_access_token=<JWT>" \
   -d '{
     "answers": {
       "Опишите ваш практический опыт с требованием: FastAPI.": "2+ years, designed APIs and auth.",
@@ -50,3 +77,25 @@ curl -X PATCH http://localhost:8888/api/v1/applications/<APPLICATION_ID>/answers
     }
   }'
 ```
+
+## Update application stage manually
+
+```bash
+curl -X PATCH http://localhost:8888/api/v1/applications/<APPLICATION_ID>/stage \
+  -H "Content-Type: application/json" \
+  -H "Cookie: hr_access_token=<JWT>" \
+  -d '{
+    "stage": "chat_not_joined"
+  }'
+```
+
+Available stages:
+
+- `new`
+- `questions_sent`
+- `chat_not_joined`
+- `questions_unanswered`
+- `in_review`
+- `interview`
+- `rejected`
+- `hired`

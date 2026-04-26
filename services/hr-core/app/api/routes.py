@@ -1,18 +1,60 @@
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.api.deps import ACCESS_COOKIE_NAME, get_current_hr
+from app.core.config import COOKIE_SECURE, JWT_EXPIRE_MINUTES
+from app.core.security import create_access_token
 from app.db.session import get_db
-from app.models.application import Application
-from app.models.application import ApplicationStage
+from app.models.application import Application, ApplicationStage
+from app.models.hr_user import HRUser
 from app.models.vacancy import Vacancy
-from app.schemas.application import ApplicationAnswersUpdate, ApplicationCreate, ApplicationRead
+from app.schemas.application import (
+    ApplicationAnswersUpdate,
+    ApplicationCreate,
+    ApplicationRead,
+    ApplicationStageUpdate,
+)
+from app.schemas.auth import HRLoginRequest, HRRegisterRequest, HRUserRead
 from app.schemas.vacancy import VacancyCreate, VacancyRead
 from app.services.application_service import ApplicationService
+from app.services.auth_service import authenticate_hr, register_hr
 
-router = APIRouter()
+auth_router = APIRouter(prefix="/auth", tags=["auth"])
+router = APIRouter(tags=["platform"], dependencies=[Depends(get_current_hr)])
+
+
+@auth_router.post("/register", response_model=HRUserRead, status_code=status.HTTP_201_CREATED)
+def register(payload: HRRegisterRequest, db: Session = Depends(get_db)) -> HRUser:
+    return register_hr(db, payload)
+
+
+@auth_router.post("/login", response_model=HRUserRead)
+def login(payload: HRLoginRequest, response: Response, db: Session = Depends(get_db)) -> HRUser:
+    user = authenticate_hr(db, payload)
+    token = create_access_token(user.id)
+    response.set_cookie(
+        key=ACCESS_COOKIE_NAME,
+        value=token,
+        httponly=True,
+        secure=COOKIE_SECURE,
+        samesite="lax",
+        max_age=JWT_EXPIRE_MINUTES * 60,
+    )
+    return user
+
+
+@auth_router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
+def logout(response: Response) -> Response:
+    response.delete_cookie(key=ACCESS_COOKIE_NAME)
+    return response
+
+
+@auth_router.get("/me", response_model=HRUserRead)
+def me(current_user: HRUser = Depends(get_current_hr)) -> HRUser:
+    return current_user
 
 
 @router.post("/vacancies", response_model=VacancyRead, status_code=status.HTTP_201_CREATED)
@@ -67,6 +109,22 @@ def update_application_answers(
 
     application.answers = payload.answers
     application.stage = ApplicationStage.IN_REVIEW.value
+    db.commit()
+    db.refresh(application)
+    return application
+
+
+@router.patch("/applications/{application_id}/stage", response_model=ApplicationRead)
+def update_application_stage(
+    application_id: UUID,
+    payload: ApplicationStageUpdate,
+    db: Session = Depends(get_db),
+) -> Application:
+    application = db.get(Application, application_id)
+    if application is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Application not found")
+
+    application.stage = payload.stage.value
     db.commit()
     db.refresh(application)
     return application

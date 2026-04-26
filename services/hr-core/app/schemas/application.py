@@ -3,6 +3,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, EmailStr, Field
 
+from app.models.application import ApplicationStage
+
 
 class ApplicationCreate(BaseModel):
     vacancy_id: UUID
@@ -29,3 +31,7 @@ class ApplicationRead(BaseModel):
 
 class ApplicationAnswersUpdate(BaseModel):
     answers: dict[str, str]
+
+
+class ApplicationStageUpdate(BaseModel):
+    stage: ApplicationStage

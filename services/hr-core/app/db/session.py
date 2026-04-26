@@ -11,6 +11,7 @@ SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False, expi
 
 def create_db() -> None:
     from app.models.application import Application  # noqa: F401
+    from app.models.hr_user import HRUser  # noqa: F401
     from app.models.vacancy import Vacancy  # noqa: F401
 
     Base.metadata.create_all(bind=engine)
