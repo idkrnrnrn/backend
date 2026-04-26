@@ -394,6 +394,18 @@ export async function buildApp(options: BuildAppOptions) {
     void reply.status(500).send({ detail: "Internal server error" });
   });
 
+  app.addHook("onRequest", async (request, reply) => {
+    if (request.method === "OPTIONS") {
+      applyCorsHeaders(request, reply, options.config);
+      return reply.status(204).send();
+    }
+  });
+
+  app.addHook("onSend", async (request, reply, payload) => {
+    applyCorsHeaders(request, reply, options.config);
+    return payload;
+  });
+
   async function requireAuth(request: FastifyRequest, _reply: FastifyReply) {
     request.currentUser = await authService.getUserFromToken(request.cookies[authService.cookieName()]);
   }
@@ -899,4 +911,27 @@ export async function buildApp(options: BuildAppOptions) {
   );
 
   return app;
+}
+
+function applyCorsHeaders(request: FastifyRequest, reply: FastifyReply, config: AppConfig) {
+  const origin = request.headers.origin;
+  if (!origin || !isAllowedOrigin(origin, config.allowedOrigins)) {
+    return;
+  }
+
+  reply.header("access-control-allow-origin", origin);
+  reply.header("access-control-allow-credentials", "true");
+  reply.header("access-control-allow-methods", "GET,POST,PATCH,PUT,DELETE,OPTIONS");
+  reply.header(
+    "access-control-allow-headers",
+    request.headers["access-control-request-headers"] ?? "content-type"
+  );
+  reply.header("vary", "Origin");
+}
+
+function isAllowedOrigin(origin: string, allowedOrigins: string[]) {
+  return (
+    allowedOrigins.includes(origin) ||
+    /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(origin)
+  );
 }
