@@ -88,6 +88,7 @@ const applicationResponseSchema = {
     "stage",
     "resume_text",
     "answers",
+    "candidate_profile",
     "clarifying_questions",
     "score",
     "score_reasons",
@@ -102,7 +103,21 @@ const applicationResponseSchema = {
     stage: { type: "string", enum: [...applicationStages] },
     resume_text: { type: "string" },
     answers: { type: "object", additionalProperties: { type: "string" } },
-    clarifying_questions: { type: "array", items: { type: "string" } },
+    candidate_profile: { anyOf: [{ type: "object", additionalProperties: true }, { type: "null" }] },
+    clarifying_questions: {
+      type: "array",
+      items: {
+        type: "object",
+        required: ["id", "text"],
+        properties: {
+          id: { type: "string" },
+          text: { type: "string" },
+          signal: { type: "string" },
+          type: { type: "string" },
+          options: { type: "array", items: { type: "string" } }
+        }
+      }
+    },
     score: { anyOf: [{ type: "number" }, { type: "null" }] },
     score_reasons: { type: "array", items: { type: "string" } },
     risks_to_clarify: { type: "array", items: { type: "string" } },

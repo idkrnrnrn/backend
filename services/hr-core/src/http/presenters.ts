@@ -35,6 +35,7 @@ export function presentApplication(application: Application) {
     stage: application.stage,
     resume_text: application.resumeText,
     answers: application.answers,
+    candidate_profile: application.candidateProfile,
     clarifying_questions: application.clarifyingQuestions,
     score: application.score,
     score_reasons: application.scoreReasons,

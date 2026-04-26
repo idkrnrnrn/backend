@@ -11,7 +11,20 @@ const fakeLlmClient: LLMClient = {
         seniority: "senior",
         skills: ["Python", "PostgreSQL"]
       },
-      clarifyingQuestions: ["Расскажите про high-load проект.", "Как валидируете требования?"]
+      clarifyingQuestions: [
+        {
+          id: "highload_experience",
+          text: "Расскажите про high-load проект.",
+          signal: "experience_match",
+          type: "free_text"
+        },
+        {
+          id: "requirements_validation",
+          text: "Как валидируете требования?",
+          signal: "skills_match",
+          type: "free_text"
+        }
+      ]
     };
   },
   async rankCandidate(_payload) {
@@ -117,6 +130,20 @@ describe("vacancies and applications", () => {
 
     expect(application.statusCode).toBe(201);
     expect(application.json().stage).toBe("questions_sent");
+    expect(application.json().candidate_profile).toEqual({
+      seniority: "senior",
+      skills: ["Python", "PostgreSQL"]
+    });
+    expect(application.json().clarifying_questions).toEqual([
+      expect.objectContaining({
+        id: "highload_experience",
+        text: "Расскажите про high-load проект."
+      }),
+      expect.objectContaining({
+        id: "requirements_validation",
+        text: "Как валидируете требования?"
+      })
+    ]);
     expect(application.json().score).toBe(null);
     expect(application.json().score_reasons).toEqual([]);
     expect(application.json().risks_to_clarify).toEqual([]);

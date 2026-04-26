@@ -62,7 +62,8 @@ curl -X POST http://localhost:8888/api/v1/applications \
 Response includes:
 
 - `stage`
-- `clarifying_questions[]`
+- `candidate_profile`
+- `clarifying_questions[]` with `id`, `text`, optional `signal/type/options`
 - `score`
 - `score_reasons[]`
 - `risks_to_clarify[]`

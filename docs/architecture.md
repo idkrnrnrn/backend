@@ -42,10 +42,11 @@
 - `stage` (`new`, `questions_sent`, `chat_not_joined`, `questions_unanswered`, `in_review`, `interview`, `rejected`, `hired`)
 - `resume_text`
 - `answers` (Q/A map)
+- `candidate_profile` (saved result of `prepare-screening`)
 - `score` (0-100)
 - `score_reasons[]`
 - `risks_to_clarify[]`
-- `clarifying_questions[]`
+- `clarifying_questions[]` (structured objects with `id`, `text`, optional metadata)
 - `created_at`, `updated_at`
 
 ## Service decomposition

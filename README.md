@@ -55,7 +55,7 @@ These records are inserted on first database initialization and persist in Postg
 1. HR creates vacancy in `hr-core`.
 2. Candidate submits application with resume text.
 3. `hr-core` calls `POST /api/prepare-screening` on the external LLM service with vacancy + resume text.
-4. Candidate receives clarifying questions, and the extracted candidate profile is stored internally with the application.
+4. The LLM returns structured `profile` and `questions[]`; `hr-core` stores both inside the application.
 5. After candidate answers clarifying questions, `hr-core` calls `POST /api/rank-candidate` and updates score/reasons/risks.
 6. HR tracks application stage (`chat_not_joined`, `questions_unanswered`, `in_review`, etc.).
 

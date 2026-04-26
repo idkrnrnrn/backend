@@ -49,15 +49,10 @@ export class ApplicationService {
       throw new AppError(404, "Vacancy not found");
     }
 
-    const clarifyingQuestions = application.clarifyingQuestions.map((question, index) => ({
-      id: `q${index + 1}`,
-      text: question
-    }));
-
     const ranking = await this.llmClient.rankCandidate({
       vacancy,
       candidateProfile: application.candidateProfile,
-      clarifyingQuestions,
+      clarifyingQuestions: application.clarifyingQuestions,
       answers
     });
 

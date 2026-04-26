@@ -19,7 +19,7 @@ const prepareScreeningResponseSchema = z
 
 const rankCandidateResponseSchema = z
   .object({
-    signals: z.array(z.unknown()).optional().default([]),
+    signals: z.record(z.unknown()).optional().default({}),
     rankResult: z.record(z.unknown()).optional().default({})
   })
   .passthrough();
@@ -91,22 +91,26 @@ function presentVacancyForLLM(vacancy: PrepareScreeningRequest["vacancy"]) {
     id: vacancy.id,
     title: vacancy.title,
     description: vacancy.description,
+    mustHave: vacancy.mandatoryRequirements,
+    niceToHave: vacancy.optionalRequirements,
+    responsibilities: [],
+    schedule: vacancy.workSchedule,
     location: vacancy.location,
-    role: vacancy.role,
-    mandatory_requirements: vacancy.mandatoryRequirements,
-    optional_requirements: vacancy.optionalRequirements,
-    work_schedule: vacancy.workSchedule,
-    salary_format: vacancy.salaryFormat,
-    candidate_tone: vacancy.candidateTone,
-    apply_url: vacancy.applyUrl
+    salary: vacancy.salaryFormat,
+    weights: {
+      experience: 0.25,
+      skills: 0.3,
+      schedule: 0.3,
+      motivation: 0.15
+    },
+    dealBreakers: []
   };
 }
 
-function normalizeQuestions(items: unknown[]): string[] {
+function normalizeQuestions(items: unknown[]): ScreeningQuestion[] {
   return items
     .map((item, index) => normalizeQuestion(item, index))
-    .filter((item): item is ScreeningQuestion => item !== null)
-    .map((item) => item.text);
+    .filter((item): item is ScreeningQuestion => item !== null);
 }
 
 function normalizeQuestion(item: unknown, index: number): ScreeningQuestion | null {
@@ -124,7 +128,15 @@ function normalizeQuestion(item: unknown, index: number): ScreeningQuestion | nu
       getString(record.title);
 
     if (text) {
-      return { id, text };
+      return {
+        id,
+        text,
+        signal: getString(record.signal) ?? undefined,
+        type: getString(record.type) ?? undefined,
+        options: Array.isArray(record.options)
+          ? record.options.filter((option): option is string => typeof option === "string" && option.trim().length > 0)
+          : undefined
+      };
     }
   }
 
@@ -149,20 +161,23 @@ function extractScore(rankResult: Record<string, unknown>): number {
   return 0;
 }
 
-function extractScoreReasons(rankResult: Record<string, unknown>, signals: unknown[]): string[] {
+function extractScoreReasons(rankResult: Record<string, unknown>, signals: Record<string, unknown>): string[] {
   return extractStringArray(rankResult.reasons)
     ?? extractStringArray(rankResult.scoreReasons)
-    ?? signals
-      .map((signal) => signalToReason(signal, false))
-      .filter((item): item is string => item !== null);
+    ?? extractStringArray(rankResult.topAdvantages)
+    ?? extractStringArray(signals.strengths)
+    ?? [];
 }
 
-function extractRisks(rankResult: Record<string, unknown>, signals: unknown[]): string[] {
+function extractRisks(rankResult: Record<string, unknown>, signals: Record<string, unknown>): string[] {
   return extractStringArray(rankResult.risks)
     ?? extractStringArray(rankResult.risksToClarify)
-    ?? signals
-      .map((signal) => signalToReason(signal, true))
-      .filter((item): item is string => item !== null);
+    ?? extractStringArray(rankResult.topConcerns)
+    ?? extractStringArray(signals.concerns)
+    ?? extractStringArray(rankResult.missingInfo)
+    ?? extractStringArray(signals.missingInfo)
+    ?? failedMustHaveReasons(signals.mustHave)
+    ?? [];
 }
 
 function extractStringArray(value: unknown): string[] | null {
@@ -170,21 +185,10 @@ function extractStringArray(value: unknown): string[] | null {
   return value.filter((item): item is string => typeof item === "string" && item.trim().length > 0);
 }
 
-function signalToReason(signal: unknown, wantRisk: boolean): string | null {
-  if (!signal || typeof signal !== "object") return null;
-  const record = signal as Record<string, unknown>;
-  const kind = getString(record.type)?.toLowerCase() ?? getString(record.kind)?.toLowerCase() ?? "";
-  const text =
-    getString(record.reason) ??
-    getString(record.text) ??
-    getString(record.description) ??
-    getString(record.message);
-
-  if (!text) return null;
-  if (wantRisk) {
-    return kind.includes("risk") || kind.includes("clarif") || kind.includes("weak") ? text : null;
-  }
-  return kind.includes("risk") || kind.includes("clarif") || kind.includes("weak") ? null : text;
+function failedMustHaveReasons(value: unknown): string[] | null {
+  if (!value || typeof value !== "object") return null;
+  const record = value as Record<string, unknown>;
+  return extractStringArray(record.failedReasons);
 }
 
 function getString(value: unknown): string | null {

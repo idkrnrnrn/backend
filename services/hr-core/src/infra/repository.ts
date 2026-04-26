@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { Pool } from "pg";
-import type { Application, HRUser, Vacancy } from "../domain/types.js";
+import type { Application, HRUser, ScreeningQuestion, Vacancy } from "../domain/types.js";
 
 export interface Repository {
   initialize(): Promise<void>;
@@ -85,8 +85,18 @@ const seededApplications: Application[] = [
       primary_stack: ["Python", "FastAPI", "PostgreSQL"]
     },
     clarifyingQuestions: [
-      "Опишите ваш опыт с high-load API на FastAPI.",
-      "Какие подходы к оптимизации PostgreSQL вы применяли?"
+      {
+        id: "python_highload_experience",
+        text: "Опишите ваш опыт с high-load API на FastAPI.",
+        signal: "experience_match",
+        type: "free_text"
+      },
+      {
+        id: "postgres_optimization_practice",
+        text: "Какие подходы к оптимизации PostgreSQL вы применяли?",
+        signal: "skills_match",
+        type: "free_text"
+      }
     ],
     score: 84,
     scoreReasons: ["Сильный backend-опыт", "Подтверждена работа с PostgreSQL"],
@@ -107,8 +117,18 @@ const seededApplications: Application[] = [
       primary_stack: ["TypeScript", "React"]
     },
     clarifyingQuestions: [
-      "Расскажите о вашем опыте построения дизайн-систем.",
-      "Какие метрики производительности вы обычно улучшаете?"
+      {
+        id: "design_system_experience",
+        text: "Расскажите о вашем опыте построения дизайн-систем.",
+        signal: "skills_match",
+        type: "free_text"
+      },
+      {
+        id: "frontend_performance_metrics",
+        text: "Какие метрики производительности вы обычно улучшаете?",
+        signal: "experience_match",
+        type: "free_text"
+      }
     ],
     score: 76,
     scoreReasons: ["Уверенный React/TypeScript профиль", "Хороший фокус на пользовательском опыте"],
@@ -132,8 +152,18 @@ const seededApplications: Application[] = [
       primary_stack: ["AWS", "Terraform", "CI/CD"]
     },
     clarifyingQuestions: [
-      "Как вы проектировали процессы релизов в CI/CD?",
-      "Какие практики SRE применяли в продакшене?"
+      {
+        id: "cicd_release_design",
+        text: "Как вы проектировали процессы релизов в CI/CD?",
+        signal: "skills_match",
+        type: "free_text"
+      },
+      {
+        id: "sre_practices",
+        text: "Какие практики SRE применяли в продакшене?",
+        signal: "experience_match",
+        type: "free_text"
+      }
     ],
     score: 89,
     scoreReasons: ["Сильный DevOps/SRE опыт", "Хорошая экспертиза в observability"],
@@ -528,7 +558,7 @@ function mapApplicationRow(row: Record<string, unknown>): Application {
     resumeText: String(row.resume_text),
     answers: row.answers as Record<string, string>,
     candidateProfile: (row.candidate_profile as Record<string, unknown> | null) ?? null,
-    clarifyingQuestions: row.clarifying_questions as string[],
+    clarifyingQuestions: row.clarifying_questions as ScreeningQuestion[],
     score: row.score === null ? null : Number(row.score),
     scoreReasons: row.score_reasons as string[],
     risksToClarify: row.risks_to_clarify as string[],
