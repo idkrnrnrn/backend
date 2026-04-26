@@ -1,43 +1,43 @@
 # HR Cloud-Native Platform
 
-Production-oriented skeleton of a high-load HR platform in TypeScript.
+Production-oriented каркас высоконагруженной HR-платформы на TypeScript.
 
-## Services
+## Сервисы
 
-- `hr-core`: HR auth, vacancies + applications lifecycle, candidate screening orchestration.
+- `hr-core`: аутентификация HR, жизненный цикл вакансий и откликов, оркестрация скрининга кандидатов.
 
-The LLM screening service is external to this repository. `hr-core` calls it through `HR_LLM_BASE_URL`.
-For local non-Docker runs the default is `http://127.0.0.1:3000`.
-For Docker Compose we point to `http://host.docker.internal:3000`, because `127.0.0.1` inside the container is the container itself.
+Сервис LLM-скрининга находится вне этого репозитория. `hr-core` обращается к нему через `HR_LLM_BASE_URL`.
+Для локального запуска без Docker по умолчанию используется `http://127.0.0.1:3000`.
+Для Docker Compose используется `http://host.docker.internal:3000`, потому что `127.0.0.1` внутри контейнера указывает на сам контейнер.
 
-## Quick start
+## Быстрый старт
 
 ```bash
 docker compose up --build
 ```
 
-Then open:
+После запуска откройте:
 
 - HR Core API: http://localhost:8888/docs
 
-## Authentication
+## Аутентификация
 
-1. Register HR via `POST /api/v1/auth/register` with:
+1. Зарегистрируйте HR через `POST /api/v1/auth/register` с полями:
 - `email`
 - `login`
 - `password`
 - `invite_code`
-2. Registration immediately stores JWT in HttpOnly cookie `hr_access_token`.
-3. You can also login later via `POST /api/v1/auth/login`.
-4. Access to all platform endpoints is allowed only after login.
+2. При регистрации JWT сразу сохраняется в HttpOnly-cookie `hr_access_token`.
+3. Позже можно выполнить вход через `POST /api/v1/auth/login`.
+4. Доступ ко всем endpoint платформы возможен только после авторизации.
 
-Default invite code (for local): `HR-INVITE-2026`.
+Код приглашения по умолчанию (для локальной разработки): `HR-INVITE-2026`.
 
-Data is persisted in PostgreSQL. In Docker Compose the database is mounted to a named volume, so users, vacancies, and applications survive container restarts.
+Данные хранятся в PostgreSQL. В Docker Compose база подключена к именованному тому, поэтому пользователи, вакансии и отклики сохраняются между перезапусками контейнеров.
 
-## Demo data
+## Демо-данные
 
-`hr-core` starts with preloaded demo data in PostgreSQL:
+`hr-core` стартует с предзагруженными демо-данными в PostgreSQL:
 
 - Vacancies:
 	- `11111111-1111-4111-8111-111111111111` (Старший Python-разработчик)
@@ -48,18 +48,85 @@ Data is persisted in PostgreSQL. In Docker Compose the database is mounted to a 
 	- `bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb`
 	- `cccccccc-cccc-4ccc-8ccc-cccccccccccc`
 
-These records are inserted on first database initialization and persist in PostgreSQL between restarts.
+Эти записи добавляются при первой инициализации базы и сохраняются в PostgreSQL между перезапусками.
 
-## Main flow
+## Ожидаемые бизнес-задачи
 
-1. HR creates vacancy in `hr-core`.
-2. Candidate submits application with resume text.
-3. `hr-core` calls `POST /api/prepare-screening` on the external LLM service with vacancy + resume text.
-4. The LLM returns structured `profile` and `questions[]`; `hr-core` stores both inside the application.
-5. After candidate answers clarifying questions, `hr-core` calls `POST /api/rank-candidate` and updates score/reasons/risks.
-6. HR tracks application stage (`chat_not_joined`, `questions_unanswered`, `in_review`, etc.).
+1. Сократить время первичного отбора кандидатов.
+- Решение: автоматическая подготовка профиля и уточняющих вопросов при создании отклика.
 
-## Tests
+2. Повысить качество решений на этапе short-list.
+- Решение: структурированный скоринг, причины оценки и список рисков для проверки на интервью.
+
+3. Дать единый и прозрачный процесс для всех HR.
+- Решение: единые стадии отклика, общая база вакансий и откликов, cookie-auth для защищенного доступа.
+
+4. Снизить операционную нагрузку на рекрутинг-команду.
+- Решение: хранение всех артефактов (резюме, ответы, профиль, score/reasons/risks) в одном месте.
+
+5. Обеспечить воспроизводимость подбора между запусками.
+- Решение: PostgreSQL как источник истины и предзагруженные демо-данные для быстрого старта.
+
+## Алгоритмы в текущем решении
+
+1. Онбординг HR и доступ:
+- Регистрация с invite_code.
+- Выдача JWT и хранение в HttpOnly-cookie.
+- Доступ к платформенным endpoint только после авторизации.
+
+2. Алгоритм первичного скрининга при создании отклика:
+- HR создает отклик с vacancy_id, email кандидата и текстом резюме.
+- hr-core вызывает внешний сервис: POST /api/prepare-screening.
+- В ответ сохраняются candidate_profile и clarifying_questions.
+- Стадия отклика переводится в questions_sent.
+
+3. Алгоритм дооценки кандидата после ответов:
+- HR отправляет ответы кандидата на уточняющие вопросы.
+- hr-core вызывает внешний сервис: POST /api/rank-candidate.
+- На основе результата сохраняются score, score_reasons и risks_to_clarify.
+- Стадия отклика переводится в in_review.
+
+4. Алгоритм управления процессом найма:
+- HR может вручную менять стадию отклика (chat_not_joined, interview, rejected, hired и другие).
+- Для контроля доступны список и карточки вакансий/откликов.
+
+5. Алгоритм инициализации данных:
+- При старте репозитория создаются таблицы (если отсутствуют).
+- При пустой базе автоматически добавляются демо-вакансии и демо-отклики.
+- При непустой базе повторного дублирования seed-данных не происходит.
+
+## User-flow (оптимизировано под текущее MVP)
+
+1. HR-рекрутер: вход и создание вакансии
+- Регистрируется или входит в систему.
+- Создает вакансию с требованиями и описанием.
+
+2. HR-рекрутер: запуск скрининга по кандидату
+- Создает отклик, прикладывая текст резюме.
+- Сразу получает набор уточняющих вопросов, подготовленных LLM.
+
+3. Кандидат: прохождение уточняющего этапа
+- Отвечает на вопросы (через HR или интегрированный канал на следующем этапе развития).
+
+4. HR-рекрутер: принятие решения
+- Отправляет ответы в систему и получает оценку кандидата.
+- Анализирует причины score и риски.
+- Переводит кандидата в нужную стадию воронки.
+
+5. Руководитель найма / команда
+- Просматривает карточку отклика, историю стадии и аргументацию оценки.
+- Принимает финальное решение: интервью, оффер или отказ.
+
+## Основной сценарий
+
+1. HR создает вакансию в `hr-core`.
+2. Кандидат отправляет отклик с текстом резюме.
+3. `hr-core` вызывает `POST /api/prepare-screening` внешнего LLM-сервиса с данными вакансии и резюме.
+4. LLM возвращает структурированные `profile` и `questions[]`; `hr-core` сохраняет их в отклике.
+5. После ответов кандидата на уточняющие вопросы `hr-core` вызывает `POST /api/rank-candidate` и обновляет score/reasons/risks.
+6. HR отслеживает стадию отклика (`chat_not_joined`, `questions_unanswered`, `in_review` и т.д.).
+
+## Тесты
 
 ```bash
 cd services/hr-core
