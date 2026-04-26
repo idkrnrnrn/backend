@@ -12,6 +12,7 @@ export interface Repository {
   listVacancies(limit: number, offset: number): Promise<Vacancy[]>;
   findVacancyById(id: string): Promise<Vacancy | null>;
   createApplication(input: Omit<Application, "id" | "createdAt" | "updatedAt">): Promise<Application>;
+  listApplications(limit: number, offset: number): Promise<Application[]>;
   findApplicationById(id: string): Promise<Application | null>;
   updateApplication(id: string, patch: Partial<Omit<Application, "id" | "createdAt">>): Promise<Application | null>;
 }
@@ -79,6 +80,10 @@ const seededApplications: Application[] = [
       q1: "Вела миграцию с монолита на сервисную архитектуру без простоя.",
       q2: "Работала с Kubernetes в production около трех лет."
     },
+    candidateProfile: {
+      seniority: "senior",
+      primary_stack: ["Python", "FastAPI", "PostgreSQL"]
+    },
     clarifyingQuestions: [
       "Опишите ваш опыт с high-load API на FastAPI.",
       "Какие подходы к оптимизации PostgreSQL вы применяли?"
@@ -97,6 +102,10 @@ const seededApplications: Application[] = [
     resumeText:
       "Frontend-разработчик с 4 годами опыта в React и TypeScript. Фокусируется на доступности, производительности и создании переиспользуемых UI-компонентов.",
     answers: {},
+    candidateProfile: {
+      seniority: "middle",
+      primary_stack: ["TypeScript", "React"]
+    },
     clarifyingQuestions: [
       "Расскажите о вашем опыте построения дизайн-систем.",
       "Какие метрики производительности вы обычно улучшаете?"
@@ -117,6 +126,10 @@ const seededApplications: Application[] = [
     answers: {
       q1: "Собрал переиспользуемые Terraform-модули для 20+ команд.",
       q2: "Проектировал дашборды и алерты для инцидент-менеджмента."
+    },
+    candidateProfile: {
+      seniority: "senior",
+      primary_stack: ["AWS", "Terraform", "CI/CD"]
     },
     clarifyingQuestions: [
       "Как вы проектировали процессы релизов в CI/CD?",
@@ -206,6 +219,10 @@ export class InMemoryRepository implements Repository {
     return application;
   }
 
+  async listApplications(limit: number, offset: number): Promise<Application[]> {
+    return [...this.applications.values()].slice(offset, offset + limit);
+  }
+
   async findApplicationById(id: string): Promise<Application | null> {
     return this.applications.get(id) ?? null;
   }
@@ -263,6 +280,7 @@ export class PostgresRepository implements Repository {
         stage TEXT NOT NULL,
         resume_text TEXT NOT NULL,
         answers JSONB NOT NULL,
+        candidate_profile JSONB NULL,
         clarifying_questions JSONB NOT NULL,
         score DOUBLE PRECISION NULL,
         score_reasons JSONB NOT NULL,
@@ -275,6 +293,11 @@ export class PostgresRepository implements Repository {
     await this.pool.query(`
       ALTER TABLE vacancies
       ADD COLUMN IF NOT EXISTS description TEXT NOT NULL DEFAULT '';
+    `);
+
+    await this.pool.query(`
+      ALTER TABLE applications
+      ADD COLUMN IF NOT EXISTS candidate_profile JSONB NULL;
     `);
 
     const vacancyCount = Number((await this.pool.query("SELECT COUNT(*)::int AS count FROM vacancies")).rows[0].count);
@@ -359,6 +382,13 @@ export class PostgresRepository implements Repository {
     return application;
   }
 
+  async listApplications(limit: number, offset: number): Promise<Application[]> {
+    const rows = (
+      await this.pool.query("SELECT * FROM applications ORDER BY created_at ASC LIMIT $1 OFFSET $2", [limit, offset])
+    ).rows;
+    return rows.map(mapApplicationRow);
+  }
+
   async findApplicationById(id: string): Promise<Application | null> {
     const row = (await this.pool.query("SELECT * FROM applications WHERE id = $1", [id])).rows[0];
     return row ? mapApplicationRow(row) : null;
@@ -384,11 +414,12 @@ export class PostgresRepository implements Repository {
            stage = $4,
            resume_text = $5,
            answers = $6,
-           clarifying_questions = $7,
-           score = $8,
-           score_reasons = $9,
-           risks_to_clarify = $10,
-           updated_at = $11
+           candidate_profile = $7,
+           clarifying_questions = $8,
+           score = $9,
+           score_reasons = $10,
+           risks_to_clarify = $11,
+           updated_at = $12
        WHERE id = $1`,
       [
         updated.id,
@@ -397,6 +428,7 @@ export class PostgresRepository implements Repository {
         updated.stage,
         updated.resumeText,
         JSON.stringify(updated.answers),
+        updated.candidateProfile === null ? null : JSON.stringify(updated.candidateProfile),
         JSON.stringify(updated.clarifyingQuestions),
         updated.score,
         JSON.stringify(updated.scoreReasons),
@@ -437,8 +469,8 @@ export class PostgresRepository implements Repository {
     await this.pool.query(
       `INSERT INTO applications (
          id, vacancy_id, candidate_email, stage, resume_text, answers,
-         clarifying_questions, score, score_reasons, risks_to_clarify, created_at, updated_at
-       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+         candidate_profile, clarifying_questions, score, score_reasons, risks_to_clarify, created_at, updated_at
+       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
        ON CONFLICT (id) DO NOTHING`,
       [
         application.id,
@@ -447,6 +479,7 @@ export class PostgresRepository implements Repository {
         application.stage,
         application.resumeText,
         JSON.stringify(application.answers),
+        application.candidateProfile === null ? null : JSON.stringify(application.candidateProfile),
         JSON.stringify(application.clarifyingQuestions),
         application.score,
         JSON.stringify(application.scoreReasons),
@@ -494,6 +527,7 @@ function mapApplicationRow(row: Record<string, unknown>): Application {
     stage: row.stage as Application["stage"],
     resumeText: String(row.resume_text),
     answers: row.answers as Record<string, string>,
+    candidateProfile: (row.candidate_profile as Record<string, unknown> | null) ?? null,
     clarifyingQuestions: row.clarifying_questions as string[],
     score: row.score === null ? null : Number(row.score),
     scoreReasons: row.score_reasons as string[],

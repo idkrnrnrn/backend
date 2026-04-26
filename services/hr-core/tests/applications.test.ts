@@ -1,14 +1,21 @@
 import { describe, expect, it } from "vitest";
 import { loadConfig } from "../src/config/env.js";
-import type { ScreeningRequest } from "../src/domain/types.js";
 import { buildApp } from "../src/http/app.js";
 import { InMemoryRepository } from "../src/infra/repository.js";
 import type { LLMClient } from "../src/services/llmClient.js";
 
 const fakeLlmClient: LLMClient = {
-  async screenResume(_payload: ScreeningRequest) {
+  async prepareScreening(_payload) {
     return {
-      clarifyingQuestions: ["Расскажите про high-load проект.", "Как валидируете требования?"],
+      candidateProfile: {
+        seniority: "senior",
+        skills: ["Python", "PostgreSQL"]
+      },
+      clarifyingQuestions: ["Расскажите про high-load проект.", "Как валидируете требования?"]
+    };
+  },
+  async rankCandidate(_payload) {
+    return {
       score: 78.5,
       scoreReasons: ["Хороший опыт Python", "Есть production опыт"],
       risksToClarify: ["Проверить Kafka"]
@@ -85,7 +92,7 @@ describe("vacancies and applications", () => {
     expect(listed.json()).toEqual(expect.arrayContaining([expect.objectContaining({ id: created.json().id })]));
   });
 
-  it("creates application, stores screening result, answers and stage updates", async () => {
+  it("creates application, stores screening questions, reranks after answers and stage updates", async () => {
     const app = await makeApp();
     const cookie = await login(app, 3);
 
@@ -110,7 +117,9 @@ describe("vacancies and applications", () => {
 
     expect(application.statusCode).toBe(201);
     expect(application.json().stage).toBe("questions_sent");
-    expect(application.json().score).toBe(78.5);
+    expect(application.json().score).toBe(null);
+    expect(application.json().score_reasons).toEqual([]);
+    expect(application.json().risks_to_clarify).toEqual([]);
 
     const answered = await app.inject({
       method: "PATCH",
@@ -120,6 +129,9 @@ describe("vacancies and applications", () => {
     });
     expect(answered.statusCode).toBe(200);
     expect(answered.json().stage).toBe("in_review");
+    expect(answered.json().score).toBe(78.5);
+    expect(answered.json().score_reasons).toEqual(["Хороший опыт Python", "Есть production опыт"]);
+    expect(answered.json().risks_to_clarify).toEqual(["Проверить Kafka"]);
 
     const staged = await app.inject({
       method: "PATCH",
@@ -129,6 +141,35 @@ describe("vacancies and applications", () => {
     });
     expect(staged.statusCode).toBe(200);
     expect(staged.json().stage).toBe("chat_not_joined");
+  });
+
+  it("lists all applications and returns application by resume id", async () => {
+    const app = await makeApp();
+    const cookie = await login(app, 5);
+
+    const applications = await app.inject({
+      method: "GET",
+      url: "/api/v1/applications?limit=10&offset=0",
+      cookies: { hr_access_token: cookie }
+    });
+    expect(applications.statusCode).toBe(200);
+    expect(applications.json()).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          candidate_email: "alina.petrenko@nl.ourelephant.ru",
+          id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
+        })
+      ])
+    );
+
+    const applicationByResume = await app.inject({
+      method: "GET",
+      url: "/api/v1/applications/resumes/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      cookies: { hr_access_token: cookie }
+    });
+    expect(applicationByResume.statusCode).toBe(200);
+    expect(applicationByResume.json().candidate_email).toBe("alina.petrenko@nl.ourelephant.ru");
+    expect(applicationByResume.json().id).toBe("aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa");
   });
 
   it("returns 404 when creating application for unknown vacancy", async () => {

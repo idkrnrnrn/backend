@@ -92,6 +92,20 @@ Other preloaded application IDs:
 - `bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb`
 - `cccccccc-cccc-4ccc-8ccc-cccccccccccc`
 
+## List all applications (candidates)
+
+```bash
+curl -X GET "http://localhost:8888/api/v1/applications?limit=10&offset=0" \
+  -H "Cookie: hr_access_token=<JWT>"
+```
+
+## Get application by resume ID
+
+```bash
+curl -X GET http://localhost:8888/api/v1/applications/resumes/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa \
+  -H "Cookie: hr_access_token=<JWT>"
+```
+
 ## Submit answers to clarifying questions
 
 ```bash

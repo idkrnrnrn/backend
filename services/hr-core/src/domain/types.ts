@@ -46,6 +46,7 @@ export type Application = {
   stage: ApplicationStage;
   resumeText: string;
   answers: Record<string, string>;
+  candidateProfile: Record<string, unknown> | null;
   clarifyingQuestions: string[];
   score: number | null;
   scoreReasons: string[];
@@ -54,14 +55,29 @@ export type Application = {
   updatedAt: string;
 };
 
-export type ScreeningRequest = {
-  resumeText: string;
-  mandatoryRequirements: string[];
-  optionalRequirements: string[];
+export type ScreeningQuestion = {
+  id: string;
+  text: string;
 };
 
-export type ScreeningResult = {
+export type PrepareScreeningRequest = {
+  vacancy: Vacancy;
+  resumeText: string;
+};
+
+export type PrepareScreeningResult = {
+  candidateProfile: Record<string, unknown> | null;
   clarifyingQuestions: string[];
+};
+
+export type RankCandidateRequest = {
+  vacancy: Vacancy;
+  candidateProfile: Record<string, unknown> | null;
+  clarifyingQuestions: ScreeningQuestion[];
+  answers: Record<string, string>;
+};
+
+export type RankCandidateResult = {
   score: number;
   scoreReasons: string[];
   risksToClarify: string[];

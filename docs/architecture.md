@@ -120,6 +120,8 @@
 - `GET /api/v1/vacancies`
 - `GET /api/v1/vacancies/{vacancy_id}`
 - `POST /api/v1/applications`
+- `GET /api/v1/applications`
+- `GET /api/v1/applications/resumes/{resume_id}`
 - `GET /api/v1/applications/{application_id}`
 - `PATCH /api/v1/applications/{application_id}/answers`
 - `PATCH /api/v1/applications/{application_id}/stage`

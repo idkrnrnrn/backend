@@ -221,6 +221,14 @@ const applicationParamsSchema = {
   }
 } as const;
 
+const resumeParamsSchema = {
+  type: "object",
+  required: ["resumeId"],
+  properties: {
+    resumeId: { type: "string", format: "uuid" }
+  }
+} as const;
+
 export type BuildAppOptions = {
   config: AppConfig;
   repo?: Repository;
@@ -455,6 +463,44 @@ export async function buildApp(options: BuildAppOptions) {
   );
 
   app.get(
+    "/api/v1/applications",
+    {
+      preHandler: requireAuth,
+      schema: {
+        tags: ["applications"],
+        security: [{ cookieAuth: [] }],
+        querystring: listVacanciesQuerySchema,
+        response: { 200: { type: "array", items: applicationResponseSchema }, 401: errorResponseSchema }
+      }
+    },
+    async (request) => {
+      const query = request.query as { limit?: string; offset?: string };
+      const limit = Math.min(Math.max(Number(query.limit ?? "50"), 1), 100);
+      const offset = Math.max(Number(query.offset ?? "0"), 0);
+      return (await repo.listApplications(limit, offset)).map(presentApplication);
+    }
+  );
+
+  app.get(
+    "/api/v1/applications/resumes/:resumeId",
+    {
+      preHandler: requireAuth,
+      schema: {
+        tags: ["applications"],
+        security: [{ cookieAuth: [] }],
+        params: resumeParamsSchema,
+        response: { 200: applicationResponseSchema, 401: errorResponseSchema, 404: errorResponseSchema }
+      }
+    },
+    async (request) => {
+      const { resumeId } = request.params as { resumeId: string };
+      const application = await repo.findApplicationById(resumeId);
+      if (!application) throw new AppError(404, "Application not found");
+      return presentApplication(application);
+    }
+  );
+
+  app.get(
     "/api/v1/applications/:applicationId",
     {
       preHandler: requireAuth,
@@ -488,11 +534,7 @@ export async function buildApp(options: BuildAppOptions) {
     async (request) => {
     const { applicationId } = request.params as { applicationId: string };
     const payload = answersUpdateSchema.parse(request.body);
-    const application = await repo.updateApplication(applicationId, {
-      answers: payload.answers,
-      stage: "in_review"
-    });
-    if (!application) throw new AppError(404, "Application not found");
+    const application = await applicationService.submitAnswers(applicationId, payload.answers);
     return presentApplication(application);
     }
   );

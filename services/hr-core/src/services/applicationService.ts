@@ -19,10 +19,9 @@ export class ApplicationService {
       throw new AppError(404, "Vacancy not found");
     }
 
-    const screening = await this.llmClient.screenResume({
-      resumeText: input.resumeText,
-      mandatoryRequirements: vacancy.mandatoryRequirements,
-      optionalRequirements: vacancy.optionalRequirements
+    const screening = await this.llmClient.prepareScreening({
+      vacancy,
+      resumeText: input.resumeText
     });
 
     return await this.repo.createApplication({
@@ -31,10 +30,49 @@ export class ApplicationService {
       stage: "questions_sent",
       resumeText: input.resumeText,
       answers: {},
+      candidateProfile: screening.candidateProfile,
       clarifyingQuestions: screening.clarifyingQuestions,
-      score: screening.score,
-      scoreReasons: screening.scoreReasons,
-      risksToClarify: screening.risksToClarify
+      score: null,
+      scoreReasons: [],
+      risksToClarify: []
     });
+  }
+
+  async submitAnswers(applicationId: string, answers: Record<string, string>): Promise<Application> {
+    const application = await this.repo.findApplicationById(applicationId);
+    if (!application) {
+      throw new AppError(404, "Application not found");
+    }
+
+    const vacancy = await this.repo.findVacancyById(application.vacancyId);
+    if (!vacancy) {
+      throw new AppError(404, "Vacancy not found");
+    }
+
+    const clarifyingQuestions = application.clarifyingQuestions.map((question, index) => ({
+      id: `q${index + 1}`,
+      text: question
+    }));
+
+    const ranking = await this.llmClient.rankCandidate({
+      vacancy,
+      candidateProfile: application.candidateProfile,
+      clarifyingQuestions,
+      answers
+    });
+
+    const updated = await this.repo.updateApplication(applicationId, {
+      answers,
+      stage: "in_review",
+      score: ranking.score,
+      scoreReasons: ranking.scoreReasons,
+      risksToClarify: ranking.risksToClarify
+    });
+
+    if (!updated) {
+      throw new AppError(404, "Application not found");
+    }
+
+    return updated;
   }
 }

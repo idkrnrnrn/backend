@@ -31,6 +31,15 @@ describe("OpenAPI docs", () => {
       ])
     );
     expect(document.paths["/api/v1/applications"].post.requestBody).toBeDefined();
+    expect(document.paths["/api/v1/applications"].get.parameters).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ name: "limit", in: "query" }),
+        expect.objectContaining({ name: "offset", in: "query" })
+      ])
+    );
+    expect(document.paths["/api/v1/applications/resumes/{resumeId}"].get.parameters).toEqual(
+      expect.arrayContaining([expect.objectContaining({ name: "resumeId", in: "path" })])
+    );
     expect(document.paths["/api/v1/applications/{applicationId}/stage"].patch.requestBody).toBeDefined();
     expect(document.paths["/api/v1/applications/{applicationId}/stage"].patch.parameters).toEqual(
       expect.arrayContaining([expect.objectContaining({ name: "applicationId", in: "path" })])

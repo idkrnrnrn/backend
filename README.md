@@ -6,7 +6,9 @@ Production-oriented skeleton of a high-load HR platform in TypeScript.
 
 - `hr-core`: HR auth, vacancies + applications lifecycle, candidate screening orchestration.
 
-The LLM screening service is external to this repository. `hr-core` calls its `/v1/screen` endpoint through `HR_LLM_BASE_URL`.
+The LLM screening service is external to this repository. `hr-core` calls it through `HR_LLM_BASE_URL`.
+For local non-Docker runs the default is `http://127.0.0.1:3000`.
+For Docker Compose we point to `http://host.docker.internal:3000`, because `127.0.0.1` inside the container is the container itself.
 
 ## Quick start
 
@@ -52,9 +54,10 @@ These records are inserted on first database initialization and persist in Postg
 
 1. HR creates vacancy in `hr-core`.
 2. Candidate submits application with resume text.
-3. `hr-core` calls the external LLM screening service.
-4. Candidate receives clarifying questions (stubbed notifier), application gets score/reasons/risks.
-5. HR tracks application stage (`chat_not_joined`, `questions_unanswered`, `in_review`, etc.).
+3. `hr-core` calls `POST /api/prepare-screening` on the external LLM service with vacancy + resume text.
+4. Candidate receives clarifying questions, and the extracted candidate profile is stored internally with the application.
+5. After candidate answers clarifying questions, `hr-core` calls `POST /api/rank-candidate` and updates score/reasons/risks.
+6. HR tracks application stage (`chat_not_joined`, `questions_unanswered`, `in_review`, etc.).
 
 ## Tests
 
