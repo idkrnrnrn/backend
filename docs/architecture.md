@@ -23,6 +23,7 @@
 
 - `id`
 - `title`
+- `description`
 - `location`
 - `role`
 - `mandatory_requirements[]`

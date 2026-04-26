@@ -15,6 +15,7 @@ export const loginSchema = z.object({
 
 export const vacancyCreateSchema = z.object({
   title: z.string().min(2).max(255),
+  description: z.string().min(20).max(4000),
   location: z.string().min(2).max(255),
   role: z.string().min(2).max(255),
   mandatory_requirements: z.array(z.string()).default([]),

@@ -26,6 +26,7 @@ export type HRUser = {
 export type Vacancy = {
   id: string;
   title: string;
+  description: string;
   location: string;
   role: string;
   mandatoryRequirements: string[];

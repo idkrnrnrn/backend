@@ -13,6 +13,7 @@ export function presentVacancy(vacancy: Vacancy) {
   return {
     id: vacancy.id,
     title: vacancy.title,
+    description: vacancy.description,
     location: vacancy.location,
     role: vacancy.role,
     mandatory_requirements: vacancy.mandatoryRequirements,

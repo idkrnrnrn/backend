@@ -41,9 +41,9 @@ describe("auth", () => {
   it("registers, stores cookie, returns current HR and logs out", async () => {
     const app = await makeApp();
 
-    const registered = await register(app, "hr1@example.com", "hr_one");
+    const registered = await register(app, "hr1@nl.ourelephant.ru", "hr_one");
     expect(registered.statusCode).toBe(201);
-    expect(registered.json().email).toBe("hr1@example.com");
+    expect(registered.json().email).toBe("hr1@nl.ourelephant.ru");
     const cookie = registered.cookies.find((item) => item.name === "hr_access_token");
     expect(cookie?.httpOnly).toBe(true);
 
@@ -51,7 +51,7 @@ describe("auth", () => {
       method: "POST",
       url: "/api/v1/auth/login",
       payload: {
-        email: "hr1@example.com",
+        email: "hr1@nl.ourelephant.ru",
         password: "StrongPass123"
       }
     });
@@ -80,7 +80,7 @@ describe("auth", () => {
       method: "POST",
       url: "/api/v1/auth/register",
       payload: {
-        email: "bad@example.com",
+        email: "bad@nl.ourelephant.ru",
         login: "bad_login",
         password: "StrongPass123",
         invite_code: "WRONG"
@@ -88,14 +88,14 @@ describe("auth", () => {
     });
     expect(invalidInvite.statusCode).toBe(403);
 
-    expect((await register(app, "dup@example.com", "dup_login")).statusCode).toBe(201);
-    expect((await register(app, "dup@example.com", "other_login")).statusCode).toBe(409);
-    expect((await register(app, "other@example.com", "dup_login")).statusCode).toBe(409);
+    expect((await register(app, "dup@nl.ourelephant.ru", "dup_login")).statusCode).toBe(201);
+    expect((await register(app, "dup@nl.ourelephant.ru", "other_login")).statusCode).toBe(409);
+    expect((await register(app, "other@nl.ourelephant.ru", "dup_login")).statusCode).toBe(409);
   });
 
   it("works with an injected in-memory repository for tests", async () => {
     const app = await makeApp();
-    const registered = await register(app, "persist@example.com", "persist_hr");
+    const registered = await register(app, "persist@nl.ourelephant.ru", "persist_hr");
 
     expect(registered.statusCode).toBe(201);
   });

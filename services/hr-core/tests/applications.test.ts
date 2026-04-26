@@ -29,7 +29,7 @@ async function makeApp() {
 }
 
 async function login(app: Awaited<ReturnType<typeof makeApp>>, idx: number) {
-  const email = `hr${idx}@example.com`;
+  const email = `hr${idx}@nl.ourelephant.ru`;
   await app.inject({
     method: "POST",
     url: "/api/v1/auth/register",
@@ -49,15 +49,17 @@ async function login(app: Awaited<ReturnType<typeof makeApp>>, idx: number) {
 }
 
 const vacancyPayload = {
-  title: "Senior Python Engineer",
-  location: "Remote, EU",
-  role: "Backend",
+  title: "Старший Python-разработчик",
+  description:
+    "Ищем backend-инженера для развития высоконагруженной HR-платформы. Нужно проектировать API, оптимизировать производительность и участвовать в архитектурных решениях команды.",
+  location: "Удаленно, Россия",
+  role: "Бэкенд-разработка",
   mandatory_requirements: ["Python", "FastAPI", "PostgreSQL"],
-  optional_requirements: ["Kubernetes", "Kafka", "English B2"],
-  work_schedule: "Full-time",
-  salary_format: "Gross, EUR",
+  optional_requirements: ["Kubernetes", "Kafka", "Английский B2"],
+  work_schedule: "Полный день",
+  salary_format: "320 000-420 000 RUB/month",
   candidate_tone: "zoomer",
-  apply_url: "https://jobs.example.com/python-senior"
+  apply_url: "https://nl.ourelephant.ru/jobs/python-senior"
 };
 
 describe("vacancies and applications", () => {
@@ -100,9 +102,9 @@ describe("vacancies and applications", () => {
       cookies: { hr_access_token: cookie },
       payload: {
         vacancy_id: vacancy.json().id,
-        candidate_email: "candidate@example.com",
+        candidate_email: "candidate@nl.ourelephant.ru",
         resume_text:
-          "I have 5 years of backend experience with production APIs, PostgreSQL, Docker and Kubernetes at scale."
+          "У меня 5 лет опыта в backend-разработке, работал с production API, PostgreSQL, Docker и Kubernetes, занимался оптимизацией производительности сервисов."
       }
     });
 
@@ -139,7 +141,7 @@ describe("vacancies and applications", () => {
       cookies: { hr_access_token: cookie },
       payload: {
         vacancy_id: "00000000-0000-0000-0000-000000000000",
-        candidate_email: "candidate@example.com",
+        candidate_email: "candidate@nl.ourelephant.ru",
         resume_text: "Python ".repeat(30)
       }
     });

@@ -35,18 +35,18 @@ Data is persisted in PostgreSQL. In Docker Compose the database is mounted to a 
 
 ## Demo data
 
-`hr-core` starts with preloaded demo data in the in-memory repository:
+`hr-core` starts with preloaded demo data in PostgreSQL:
 
 - Vacancies:
-	- `11111111-1111-4111-8111-111111111111` (Senior Python Engineer)
-	- `22222222-2222-4222-8222-222222222222` (Middle Frontend Engineer)
-	- `33333333-3333-4333-8333-333333333333` (DevOps Engineer)
+	- `11111111-1111-4111-8111-111111111111` (Старший Python-разработчик)
+	- `22222222-2222-4222-8222-222222222222` (Фронтенд-разработчик)
+	- `33333333-3333-4333-8333-333333333333` (DevOps-инженер)
 - Applications:
 	- `aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa`
 	- `bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb`
 	- `cccccccc-cccc-4ccc-8ccc-cccccccccccc`
 
-This data resets on each service restart.
+These records are inserted on first database initialization and persist in PostgreSQL between restarts.
 
 ## Main flow
 

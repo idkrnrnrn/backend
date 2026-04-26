@@ -19,43 +19,49 @@ export interface Repository {
 const seededVacancies: Vacancy[] = [
   {
     id: "11111111-1111-4111-8111-111111111111",
-    title: "Senior Python Engineer",
-    location: "Remote, EU",
-    role: "Backend",
+    title: "Старший Python-разработчик",
+    description:
+      "Ищем сильного backend-инженера в команду платформы. Нужно проектировать и развивать высоконагруженные сервисы на Python, улучшать производительность API и участвовать в технических решениях по архитектуре.",
+    location: "Удаленно, Россия",
+    role: "Бэкенд-разработка",
     mandatoryRequirements: ["Python", "FastAPI", "PostgreSQL"],
-    optionalRequirements: ["Kubernetes", "Kafka", "English B2"],
-    workSchedule: "Full-time",
-    salaryFormat: "Gross, EUR",
+    optionalRequirements: ["Kubernetes", "Kafka", "Английский B2"],
+    workSchedule: "Полный день",
+    salaryFormat: "320 000-420 000 RUB/month",
     candidateTone: "zoomer",
-    applyUrl: "https://jobs.example.com/python-senior",
+    applyUrl: "https://nl.ourelephant.ru/jobs/python-senior",
     createdAt: "2026-01-10T08:00:00.000Z",
     updatedAt: "2026-01-10T08:00:00.000Z"
   },
   {
     id: "22222222-2222-4222-8222-222222222222",
-    title: "Middle Frontend Engineer",
-    location: "Hybrid, Berlin",
-    role: "Frontend",
+    title: "Фронтенд-разработчик",
+    description:
+      "Нужен frontend-инженер, который поможет развивать кабинет HR и внутренние инструменты рекрутинга. Важно уметь делать аккуратные интерфейсы, держать качество кода и думать о скорости работы продукта.",
+    location: "Москва, гибрид",
+    role: "Фронтенд-разработка",
     mandatoryRequirements: ["TypeScript", "React", "Testing Library"],
-    optionalRequirements: ["Next.js", "Design systems", "Storybook"],
-    workSchedule: "Full-time",
-    salaryFormat: "Net, EUR",
+    optionalRequirements: ["Next.js", "Дизайн-системы", "Storybook"],
+    workSchedule: "Полный день",
+    salaryFormat: "220 000-300 000 RUB/month",
     candidateTone: "neutral",
-    applyUrl: "https://jobs.example.com/frontend-middle",
+    applyUrl: "https://nl.ourelephant.ru/jobs/frontend-middle",
     createdAt: "2026-01-11T09:30:00.000Z",
     updatedAt: "2026-01-11T09:30:00.000Z"
   },
   {
     id: "33333333-3333-4333-8333-333333333333",
-    title: "DevOps Engineer",
-    location: "Remote, Worldwide",
-    role: "Infrastructure",
+    title: "DevOps-инженер",
+    description:
+      "Ищем инженера инфраструктуры для развития CI/CD, Terraform-модулей и observability-платформы. Роль предполагает плотную работу с командами разработки и ответственность за надежность production-среды.",
+    location: "Удаленно, Россия",
+    role: "Инфраструктура",
     mandatoryRequirements: ["AWS", "Terraform", "CI/CD"],
     optionalRequirements: ["Kubernetes", "Prometheus", "Grafana"],
-    workSchedule: "Flexible",
-    salaryFormat: "Gross, USD",
+    workSchedule: "Гибкий график",
+    salaryFormat: "280 000-380 000 RUB/month",
     candidateTone: "boomer",
-    applyUrl: "https://jobs.example.com/devops-engineer",
+    applyUrl: "https://nl.ourelephant.ru/jobs/devops-engineer",
     createdAt: "2026-01-12T07:45:00.000Z",
     updatedAt: "2026-01-12T07:45:00.000Z"
   }
@@ -65,20 +71,20 @@ const seededApplications: Application[] = [
   {
     id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
     vacancyId: "11111111-1111-4111-8111-111111111111",
-    candidateEmail: "alina.petrenko@example.com",
+    candidateEmail: "alina.petrenko@nl.ourelephant.ru",
     stage: "in_review",
     resumeText:
-      "Python backend engineer with 6 years in fintech. Built FastAPI services, optimized PostgreSQL queries and implemented async workers for data pipelines.",
+      "Python backend-разработчик с 6 годами опыта в финтехе. Разрабатывала сервисы на FastAPI, оптимизировала запросы PostgreSQL и запускала асинхронные пайплайны обработки данных.",
     answers: {
-      q1: "Led migration from monolith to services with zero downtime.",
-      q2: "Worked with Kubernetes in production for 3 years."
+      q1: "Вела миграцию с монолита на сервисную архитектуру без простоя.",
+      q2: "Работала с Kubernetes в production около трех лет."
     },
     clarifyingQuestions: [
       "Опишите ваш опыт с high-load API на FastAPI.",
       "Какие подходы к оптимизации PostgreSQL вы применяли?"
     ],
     score: 84,
-    scoreReasons: ["Сильный backend опыт", "Подтверждена работа с PostgreSQL"],
+    scoreReasons: ["Сильный backend-опыт", "Подтверждена работа с PostgreSQL"],
     risksToClarify: ["Уточнить уровень разговорного английского"],
     createdAt: "2026-01-13T10:00:00.000Z",
     updatedAt: "2026-01-14T12:15:00.000Z"
@@ -86,17 +92,17 @@ const seededApplications: Application[] = [
   {
     id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
     vacancyId: "22222222-2222-4222-8222-222222222222",
-    candidateEmail: "mark.richter@example.com",
+    candidateEmail: "mark.richter@nl.ourelephant.ru",
     stage: "questions_sent",
     resumeText:
-      "Frontend engineer with 4 years of React and TypeScript. Focused on accessibility, performance optimization and reusable UI components.",
+      "Frontend-разработчик с 4 годами опыта в React и TypeScript. Фокусируется на доступности, производительности и создании переиспользуемых UI-компонентов.",
     answers: {},
     clarifyingQuestions: [
       "Расскажите о вашем опыте построения дизайн-систем.",
       "Какие метрики производительности вы обычно улучшаете?"
     ],
     score: 76,
-    scoreReasons: ["Уверенный React/TypeScript профиль", "Хороший фокус на UX"],
+    scoreReasons: ["Уверенный React/TypeScript профиль", "Хороший фокус на пользовательском опыте"],
     risksToClarify: ["Проверить практический опыт с Next.js"],
     createdAt: "2026-01-15T09:20:00.000Z",
     updatedAt: "2026-01-15T09:20:00.000Z"
@@ -104,13 +110,13 @@ const seededApplications: Application[] = [
   {
     id: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
     vacancyId: "33333333-3333-4333-8333-333333333333",
-    candidateEmail: "dmitry.sokolov@example.com",
+    candidateEmail: "dmitry.sokolov@nl.ourelephant.ru",
     stage: "interview",
     resumeText:
-      "DevOps engineer with 8 years of AWS infrastructure, Terraform modules and CI/CD automation. Implemented observability stack with Prometheus and Grafana.",
+      "DevOps-инженер с 8 годами опыта в AWS, Terraform и автоматизации CI/CD. Разворачивал стек наблюдаемости на Prometheus и Grafana и строил процессы эксплуатации production.",
     answers: {
-      q1: "Built reusable Terraform modules for 20+ teams.",
-      q2: "Designed incident response dashboards and alerts."
+      q1: "Собрал переиспользуемые Terraform-модули для 20+ команд.",
+      q2: "Проектировал дашборды и алерты для инцидент-менеджмента."
     },
     clarifyingQuestions: [
       "Как вы проектировали процессы релизов в CI/CD?",
@@ -237,6 +243,7 @@ export class PostgresRepository implements Repository {
       CREATE TABLE IF NOT EXISTS vacancies (
         id UUID PRIMARY KEY,
         title TEXT NOT NULL,
+        description TEXT NOT NULL,
         location TEXT NOT NULL,
         role TEXT NOT NULL,
         mandatory_requirements JSONB NOT NULL,
@@ -263,6 +270,11 @@ export class PostgresRepository implements Repository {
         created_at TIMESTAMPTZ NOT NULL,
         updated_at TIMESTAMPTZ NOT NULL
       );
+    `);
+
+    await this.pool.query(`
+      ALTER TABLE vacancies
+      ADD COLUMN IF NOT EXISTS description TEXT NOT NULL DEFAULT '';
     `);
 
     const vacancyCount = Number((await this.pool.query("SELECT COUNT(*)::int AS count FROM vacancies")).rows[0].count);
@@ -399,13 +411,14 @@ export class PostgresRepository implements Repository {
   private async insertVacancy(vacancy: Vacancy): Promise<void> {
     await this.pool.query(
       `INSERT INTO vacancies (
-         id, title, location, role, mandatory_requirements, optional_requirements,
+         id, title, description, location, role, mandatory_requirements, optional_requirements,
          work_schedule, salary_format, candidate_tone, apply_url, created_at, updated_at
-       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
        ON CONFLICT (id) DO NOTHING`,
       [
         vacancy.id,
         vacancy.title,
+        vacancy.description,
         vacancy.location,
         vacancy.role,
         JSON.stringify(vacancy.mandatoryRequirements),
@@ -459,6 +472,7 @@ function mapVacancyRow(row: Record<string, unknown>): Vacancy {
   return {
     id: String(row.id),
     title: String(row.title),
+    description: String(row.description),
     location: String(row.location),
     role: String(row.role),
     mandatoryRequirements: row.mandatory_requirements as string[],

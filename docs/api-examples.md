@@ -6,7 +6,7 @@
 curl -i -X POST http://localhost:8888/api/v1/auth/register \
   -H "Content-Type: application/json" \
   -d '{
-    "email": "hr@example.com",
+    "email": "hr@nl.ourelephant.ru",
     "login": "hr_lead",
     "password": "StrongPass123",
     "invite_code": "HR-INVITE-2026"
@@ -21,7 +21,7 @@ Registration response already sets `hr_access_token` cookie.
 curl -i -X POST http://localhost:8888/api/v1/auth/login \
   -H "Content-Type: application/json" \
   -d '{
-    "email": "hr@example.com",
+    "email": "hr@nl.ourelephant.ru",
     "password": "StrongPass123"
   }'
 ```
@@ -33,15 +33,16 @@ curl -X POST http://localhost:8888/api/v1/vacancies \
   -H "Content-Type: application/json" \
   -H "Cookie: hr_access_token=<JWT>" \
   -d '{
-    "title": "Senior Python Engineer",
-    "location": "Remote, EU",
-    "role": "Backend",
+    "title": "Старший Python-разработчик",
+    "description": "Ищем backend-инженера для развития высоконагруженной HR-платформы. Нужно проектировать API, оптимизировать производительность и участвовать в архитектурных решениях команды.",
+    "location": "Удаленно, Россия",
+    "role": "Бэкенд-разработка",
     "mandatory_requirements": ["Python", "FastAPI", "PostgreSQL"],
-    "optional_requirements": ["Kubernetes", "Kafka", "English B2"],
-    "work_schedule": "Full-time",
-    "salary_format": "Gross, EUR",
+    "optional_requirements": ["Kubernetes", "Kafka", "Английский B2"],
+    "work_schedule": "Полный день",
+    "salary_format": "320 000-420 000 RUB/month",
     "candidate_tone": "zoomer",
-    "apply_url": "https://jobs.example.com/python-senior"
+    "apply_url": "https://nl.ourelephant.ru/jobs/python-senior"
   }'
 ```
 
@@ -53,8 +54,8 @@ curl -X POST http://localhost:8888/api/v1/applications \
   -H "Cookie: hr_access_token=<JWT>" \
   -d '{
     "vacancy_id": "<VACANCY_ID>",
-    "candidate_email": "candidate@example.com",
-    "resume_text": "I have 5 years of Python backend experience. Built high-load APIs with FastAPI and PostgreSQL, worked on async processing, Docker and Kubernetes, and improved p95 latency by 35% in production."
+    "candidate_email": "candidate@nl.ourelephant.ru",
+    "resume_text": "У меня 5 лет опыта в Python backend-разработке. Делал high-load API на FastAPI и PostgreSQL, работал с Docker и Kubernetes и снижал p95 latency в production."
   }'
 ```
 

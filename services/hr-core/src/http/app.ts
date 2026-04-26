@@ -50,6 +50,7 @@ const vacancyResponseSchema = {
   required: [
     "id",
     "title",
+    "description",
     "location",
     "role",
     "mandatory_requirements",
@@ -64,6 +65,7 @@ const vacancyResponseSchema = {
   properties: {
     id: { type: "string", format: "uuid" },
     title: { type: "string" },
+    description: { type: "string" },
     location: { type: "string" },
     role: { type: "string" },
     mandatory_requirements: { type: "array", items: { type: "string" } },
@@ -133,6 +135,7 @@ const vacancyBodySchema = {
   type: "object",
   required: [
     "title",
+    "description",
     "location",
     "role",
     "mandatory_requirements",
@@ -144,6 +147,7 @@ const vacancyBodySchema = {
   ],
   properties: {
     title: { type: "string", minLength: 2, maxLength: 255 },
+    description: { type: "string", minLength: 20, maxLength: 4000 },
     location: { type: "string", minLength: 2, maxLength: 255 },
     role: { type: "string", minLength: 2, maxLength: 255 },
     mandatory_requirements: {
@@ -374,9 +378,10 @@ export async function buildApp(options: BuildAppOptions) {
     },
     async (request, reply) => {
     const payload = vacancyCreateSchema.parse(request.body);
-    const vacancy = await repo.createVacancy({
-      title: payload.title,
-      location: payload.location,
+      const vacancy = await repo.createVacancy({
+        title: payload.title,
+        description: payload.description,
+        location: payload.location,
       role: payload.role,
       mandatoryRequirements: payload.mandatory_requirements,
       optionalRequirements: payload.optional_requirements,
