@@ -31,6 +31,21 @@ Then open:
 
 Default invite code (for local): `HR-INVITE-2026`.
 
+## Demo data
+
+`hr-core` starts with preloaded demo data in the in-memory repository:
+
+- Vacancies:
+	- `11111111-1111-4111-8111-111111111111` (Senior Python Engineer)
+	- `22222222-2222-4222-8222-222222222222` (Middle Frontend Engineer)
+	- `33333333-3333-4333-8333-333333333333` (DevOps Engineer)
+- Applications:
+	- `aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa`
+	- `bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb`
+	- `cccccccc-cccc-4ccc-8ccc-cccccccccccc`
+
+This data resets on each service restart.
+
 ## Main flow
 
 1. HR creates vacancy in `hr-core`.
