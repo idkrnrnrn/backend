@@ -306,9 +306,11 @@ export async function buildApp(options: BuildAppOptions) {
       }
     },
     async (request, reply) => {
-    const payload = registerSchema.parse(request.body);
-    const user = await authService.register(payload);
-    return reply.status(201).send(presentUser(user));
+      const payload = registerSchema.parse(request.body);
+      const user = await authService.register(payload);
+      const token = authService.createAccessToken(user);
+      reply.setCookie(authService.cookieName(), token, authService.cookieOptions());
+      return reply.status(201).send(presentUser(user));
     }
   );
 
@@ -322,11 +324,11 @@ export async function buildApp(options: BuildAppOptions) {
       }
     },
     async (request, reply) => {
-    const payload = loginSchema.parse(request.body);
-    const user = await authService.authenticate(payload);
-    const token = authService.createAccessToken(user);
-    reply.setCookie(authService.cookieName(), token, authService.cookieOptions());
-    return presentUser(user);
+      const payload = loginSchema.parse(request.body);
+      const user = await authService.authenticate(payload);
+      const token = authService.createAccessToken(user);
+      reply.setCookie(authService.cookieName(), token, authService.cookieOptions());
+      return presentUser(user);
     }
   );
 

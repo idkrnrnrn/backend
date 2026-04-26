@@ -3,7 +3,7 @@
 ## Register HR
 
 ```bash
-curl -X POST http://localhost:8888/api/v1/auth/register \
+curl -i -X POST http://localhost:8888/api/v1/auth/register \
   -H "Content-Type: application/json" \
   -d '{
     "email": "hr@example.com",
@@ -12,6 +12,8 @@ curl -X POST http://localhost:8888/api/v1/auth/register \
     "invite_code": "HR-INVITE-2026"
   }'
 ```
+
+Registration response already sets `hr_access_token` cookie.
 
 ## Login HR (JWT cookie)
 

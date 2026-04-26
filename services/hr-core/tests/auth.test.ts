@@ -38,12 +38,14 @@ describe("auth", () => {
     expect(response.json()).toEqual({ detail: "Not authenticated" });
   });
 
-  it("registers, logs in, returns current HR and logs out", async () => {
+  it("registers, stores cookie, returns current HR and logs out", async () => {
     const app = await makeApp();
 
     const registered = await register(app, "hr1@example.com", "hr_one");
     expect(registered.statusCode).toBe(201);
     expect(registered.json().email).toBe("hr1@example.com");
+    const cookie = registered.cookies.find((item) => item.name === "hr_access_token");
+    expect(cookie?.httpOnly).toBe(true);
 
     const loggedIn = await app.inject({
       method: "POST",
@@ -54,9 +56,6 @@ describe("auth", () => {
       }
     });
     expect(loggedIn.statusCode).toBe(200);
-
-    const cookie = loggedIn.cookies.find((item) => item.name === "hr_access_token");
-    expect(cookie?.httpOnly).toBe(true);
 
     const me = await app.inject({
       method: "GET",

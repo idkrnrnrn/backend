@@ -25,8 +25,8 @@ Then open:
 - `login`
 - `password`
 - `invite_code`
-2. Login via `POST /api/v1/auth/login`.
-3. JWT is stored in HttpOnly cookie `hr_access_token`.
+2. Registration immediately stores JWT in HttpOnly cookie `hr_access_token`.
+3. You can also login later via `POST /api/v1/auth/login`.
 4. Access to all platform endpoints is allowed only after login.
 
 Default invite code (for local): `HR-INVITE-2026`.
