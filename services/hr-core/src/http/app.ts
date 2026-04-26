@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import cookie from "@fastify/cookie";
 import swagger from "@fastify/swagger";
 import swaggerUi from "@fastify/swagger-ui";
@@ -6,6 +7,14 @@ import { Pool } from "pg";
 import { ZodError } from "zod";
 import type { AppConfig } from "../config/env.js";
 import { AppError } from "../domain/errors.js";
+import {
+  buildBootstrap,
+  buildDomainVacancyFromFrontend,
+  frontendStageToLegacyStage,
+  parseFrontendVacancyInput,
+  presentFrontendCandidateSummary,
+  presentFrontendVacancy
+} from "../domain/frontend.js";
 import {
   answersUpdateSchema,
   applicationCreateSchema,
@@ -20,6 +29,13 @@ import { ApplicationService } from "../services/applicationService.js";
 import { AuthService } from "../services/authService.js";
 import { HttpLLMClient, type LLMClient } from "../services/llmClient.js";
 import { presentApplication, presentUser, presentVacancy } from "./presenters.js";
+import {
+  frontendCandidateStages,
+  screeningSessionCompletedSchema,
+  screeningSessionDraftSchema,
+  screeningSessionPreparedSchema,
+  type FrontendCandidateStage
+} from "../frontend/contracts.js";
 
 declare module "fastify" {
   interface FastifyRequest {
@@ -220,6 +236,85 @@ const listVacanciesQuerySchema = {
   }
 } as const;
 
+const frontendVacancyBodySchema = {
+  type: "object",
+  required: ["title", "description"],
+  properties: {
+    title: { type: "string", minLength: 2, maxLength: 255 },
+    description: { type: "string", minLength: 2, maxLength: 4000 },
+    responsibilities: { type: "string" },
+    mustHaves: { type: "string" },
+    niceToHaves: { type: "string" },
+    stopFactors: { type: "string" },
+    conditions: { type: "string" },
+    status: { type: "string", enum: ["Active", "Closed"] },
+    weights: {
+      type: "object",
+      properties: {
+        experience: { type: "number" },
+        skills: { type: "number" },
+        schedule: { type: "number" },
+        location: { type: "number" },
+        motivation: { type: "number" },
+        readiness: { type: "number" },
+        communication: { type: "number" }
+      }
+    }
+  }
+} as const;
+
+const frontendScreeningDraftBodySchema = {
+  type: "object",
+  required: ["vacancyId", "resumeText"],
+  properties: {
+    vacancyId: { type: "string" },
+    resumeText: { type: "string", minLength: 1 },
+    resumeFileName: { anyOf: [{ type: "string" }, { type: "null" }] },
+    resumeFileSizeBytes: { anyOf: [{ type: "integer" }, { type: "null" }] }
+  }
+} as const;
+
+const frontendPreparedBodySchema = {
+  type: "object",
+  required: ["candidateProfile", "clarifyingQuestions"],
+  properties: {
+    candidateProfile: { anyOf: [{ type: "object", additionalProperties: true }, { type: "null" }] },
+    resumeText: { type: "string" },
+    clarifyingQuestions: {
+      type: "array",
+      items: {
+        type: "object",
+        required: ["id", "text"],
+        properties: {
+          id: { type: "string" },
+          text: { type: "string" },
+          signal: { type: "string" },
+          type: { type: "string" },
+          options: { type: "array", items: { type: "string" } }
+        }
+      }
+    }
+  }
+} as const;
+
+const frontendCompletedBodySchema = {
+  type: "object",
+  required: ["answers", "rankResult"],
+  properties: {
+    answers: { type: "object", additionalProperties: { type: "string" } },
+    signals: { anyOf: [{ type: "object", additionalProperties: true }, { type: "null" }] },
+    rankResult: { type: "object", additionalProperties: true }
+  }
+} as const;
+
+const frontendStageBodySchema = {
+  type: "object",
+  required: ["stage"],
+  properties: {
+    stage: { type: "string", enum: [...frontendCandidateStages] }
+  }
+} as const;
+
 const vacancyParamsSchema = {
   type: "object",
   required: ["vacancyId"],
@@ -295,11 +390,20 @@ export async function buildApp(options: BuildAppOptions) {
       return;
     }
 
+    console.error("Unhandled app error", error);
     void reply.status(500).send({ detail: "Internal server error" });
   });
 
   async function requireAuth(request: FastifyRequest, _reply: FastifyReply) {
     request.currentUser = await authService.getUserFromToken(request.cookies[authService.cookieName()]);
+  }
+
+  async function requireFrontendAccess(request: FastifyRequest, reply: FastifyReply) {
+    if (options.config.frontendGuestMode) {
+      return;
+    }
+
+    return requireAuth(request, reply);
   }
 
   app.get(
@@ -404,6 +508,21 @@ export async function buildApp(options: BuildAppOptions) {
       const vacancy = await repo.createVacancy({
         title: payload.title,
         description: payload.description,
+        responsibilities: "",
+        mustHaves: payload.mandatory_requirements.map((item) => `- ${item}`).join("\n"),
+        niceToHaves: payload.optional_requirements.map((item) => `- ${item}`).join("\n"),
+        stopFactors: "",
+        conditions: [payload.work_schedule, payload.location, payload.salary_format].join("\n"),
+        weights: {
+          experience: 30,
+          skills: 25,
+          schedule: 10,
+          location: 10,
+          motivation: 10,
+          readiness: 10,
+          communication: 5
+        },
+        status: "Active",
         location: payload.location,
       role: payload.role,
       mandatoryRequirements: payload.mandatory_requirements,
@@ -478,6 +597,117 @@ export async function buildApp(options: BuildAppOptions) {
   );
 
   app.get(
+    "/api/frontend/v1/bootstrap",
+    {
+      preHandler: requireFrontendAccess,
+      schema: {
+        tags: ["frontend"],
+        response: { 200: { type: "object", additionalProperties: true }, 401: errorResponseSchema }
+      }
+    },
+    async () => {
+      const vacancies = await repo.listVacancies(1000, 0);
+      const applications = await repo.listApplications(1000, 0);
+      return buildBootstrap(vacancies, applications);
+    }
+  );
+
+  app.post(
+    "/api/frontend/v1/vacancies",
+    {
+      preHandler: requireFrontendAccess,
+      schema: {
+        tags: ["frontend"],
+        body: frontendVacancyBodySchema,
+        response: { 201: { type: "object", additionalProperties: true }, 401: errorResponseSchema }
+      }
+    },
+    async (request, reply) => {
+      const payload = parseFrontendVacancyInput(request.body);
+      const vacancy = await repo.createVacancy(buildDomainVacancyFromFrontend(payload));
+      return reply.status(201).send(presentFrontendVacancy(vacancy));
+    }
+  );
+
+  app.get(
+    "/api/frontend/v1/vacancies/:vacancyId",
+    {
+      preHandler: requireFrontendAccess,
+      schema: {
+        tags: ["frontend"],
+        params: vacancyParamsSchema,
+        response: { 200: { type: "object", additionalProperties: true }, 401: errorResponseSchema, 404: errorResponseSchema }
+      }
+    },
+    async (request) => {
+      const { vacancyId } = request.params as { vacancyId: string };
+      const vacancy = await repo.findVacancyById(vacancyId);
+      if (!vacancy) throw new AppError(404, "Vacancy not found");
+      return presentFrontendVacancy(vacancy);
+    }
+  );
+
+  app.get(
+    "/api/frontend/v1/candidates",
+    {
+      preHandler: requireFrontendAccess,
+      schema: {
+        tags: ["frontend"],
+        response: { 200: { type: "array", items: { type: "object", additionalProperties: true } }, 401: errorResponseSchema }
+      }
+    },
+    async (request) => {
+      const query = request.query as { vacancyId?: string };
+      const applications = await repo.listApplications(1000, 0);
+      const vacancies = new Map((await repo.listVacancies(1000, 0)).map((vacancy) => [vacancy.id, vacancy]));
+
+      return applications
+        .filter((application) => !query.vacancyId || application.vacancyId === query.vacancyId)
+        .map((application) => {
+          const vacancy = vacancies.get(application.vacancyId);
+          return vacancy ? presentFrontendCandidateSummary(application, vacancy) : null;
+        })
+        .filter((candidate): candidate is NonNullable<typeof candidate> => candidate !== null);
+    }
+  );
+
+  app.post(
+    "/api/frontend/v1/screening-sessions",
+    {
+      preHandler: requireFrontendAccess,
+      schema: {
+        tags: ["frontend"],
+        body: frontendScreeningDraftBodySchema,
+        response: { 201: { type: "object", additionalProperties: true }, 401: errorResponseSchema, 404: errorResponseSchema }
+      }
+    },
+    async (request, reply) => {
+      const payload = screeningSessionDraftSchema.parse(request.body);
+      const vacancy = await repo.findVacancyById(payload.vacancyId);
+      if (!vacancy) throw new AppError(404, "Vacancy not found");
+
+      const application = await repo.createApplication({
+        vacancyId: payload.vacancyId,
+        candidateEmail: `candidate-${randomUUID()}@screenr.local`,
+        stage: "new",
+        resumeText: payload.resumeText,
+        resumeFileName: payload.resumeFileName ?? null,
+        resumeFileSizeBytes: payload.resumeFileSizeBytes ?? null,
+        answers: {},
+        candidateProfile: null,
+        clarifyingQuestions: [],
+        screeningSignals: null,
+        rankResult: null,
+        score: null,
+        scoreReasons: [],
+        risksToClarify: []
+      });
+
+      return reply.status(201).send(presentFrontendCandidateSummary(application, vacancy));
+    }
+  );
+
+  app.get(
     "/api/v1/applications",
     {
       preHandler: requireAuth,
@@ -531,6 +761,99 @@ export async function buildApp(options: BuildAppOptions) {
     const application = await repo.findApplicationById(applicationId);
     if (!application) throw new AppError(404, "Application not found");
     return presentApplication(application);
+    }
+  );
+
+  app.patch(
+    "/api/frontend/v1/screening-sessions/:applicationId/prepared",
+    {
+      preHandler: requireFrontendAccess,
+      schema: {
+        tags: ["frontend"],
+        params: applicationParamsSchema,
+        body: frontendPreparedBodySchema,
+        response: { 200: { type: "object", additionalProperties: true }, 401: errorResponseSchema, 404: errorResponseSchema }
+      }
+    },
+    async (request) => {
+      const { applicationId } = request.params as { applicationId: string };
+      const payload = screeningSessionPreparedSchema.parse(request.body);
+      const current = await repo.findApplicationById(applicationId);
+      if (!current) throw new AppError(404, "Application not found");
+      const vacancy = await repo.findVacancyById(current.vacancyId);
+      if (!vacancy) throw new AppError(404, "Vacancy not found");
+
+      const updated = await repo.updateApplication(applicationId, {
+        resumeText: payload.resumeText ?? current.resumeText,
+        candidateProfile: payload.candidateProfile,
+        clarifyingQuestions: payload.clarifyingQuestions,
+        stage: "questions_sent"
+      });
+      if (!updated) throw new AppError(404, "Application not found");
+
+      return presentFrontendCandidateSummary(updated, vacancy);
+    }
+  );
+
+  app.patch(
+    "/api/frontend/v1/screening-sessions/:applicationId/completed",
+    {
+      preHandler: requireFrontendAccess,
+      schema: {
+        tags: ["frontend"],
+        params: applicationParamsSchema,
+        body: frontendCompletedBodySchema,
+        response: { 200: { type: "object", additionalProperties: true }, 401: errorResponseSchema, 404: errorResponseSchema }
+      }
+    },
+    async (request) => {
+      const { applicationId } = request.params as { applicationId: string };
+      const payload = screeningSessionCompletedSchema.parse(request.body);
+      const current = await repo.findApplicationById(applicationId);
+      if (!current) throw new AppError(404, "Application not found");
+      const vacancy = await repo.findVacancyById(current.vacancyId);
+      if (!vacancy) throw new AppError(404, "Vacancy not found");
+
+      const updated = await repo.updateApplication(applicationId, {
+        answers: payload.answers,
+        screeningSignals: payload.signals ?? null,
+        rankResult: payload.rankResult,
+        score: payload.rankResult.finalScore,
+        scoreReasons: payload.rankResult.topAdvantages,
+        risksToClarify: payload.rankResult.topConcerns,
+        stage: "in_review"
+      });
+      if (!updated) throw new AppError(404, "Application not found");
+
+      return presentFrontendCandidateSummary(updated, vacancy);
+    }
+  );
+
+  app.patch(
+    "/api/frontend/v1/candidates/:applicationId/stage",
+    {
+      preHandler: requireFrontendAccess,
+      schema: {
+        tags: ["frontend"],
+        params: applicationParamsSchema,
+        body: frontendStageBodySchema,
+        response: { 200: { type: "object", additionalProperties: true }, 401: errorResponseSchema, 404: errorResponseSchema }
+      }
+    },
+    async (request) => {
+      const { applicationId } = request.params as { applicationId: string };
+      const payload = request.body as { stage: FrontendCandidateStage };
+      const current = await repo.findApplicationById(applicationId);
+      if (!current) throw new AppError(404, "Application not found");
+      const vacancy = await repo.findVacancyById(current.vacancyId);
+      if (!vacancy) throw new AppError(404, "Vacancy not found");
+
+      const updated = await repo.updateApplication(applicationId, {
+        stage: frontendStageToLegacyStage(payload.stage)
+      });
+      if (!updated) throw new AppError(404, "Application not found");
+
+      return presentFrontendCandidateSummary(updated, vacancy);
     }
   );
 

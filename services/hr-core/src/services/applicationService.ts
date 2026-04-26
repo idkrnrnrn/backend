@@ -13,6 +13,8 @@ export class ApplicationService {
     vacancyId: string;
     candidateEmail: string;
     resumeText: string;
+    resumeFileName?: string | null;
+    resumeFileSizeBytes?: number | null;
   }): Promise<Application> {
     const vacancy = await this.repo.findVacancyById(input.vacancyId);
     if (!vacancy) {
@@ -29,9 +31,13 @@ export class ApplicationService {
       candidateEmail: input.candidateEmail,
       stage: "questions_sent",
       resumeText: input.resumeText,
+      resumeFileName: input.resumeFileName ?? null,
+      resumeFileSizeBytes: input.resumeFileSizeBytes ?? null,
       answers: {},
       candidateProfile: screening.candidateProfile,
       clarifyingQuestions: screening.clarifyingQuestions,
+      screeningSignals: null,
+      rankResult: null,
       score: null,
       scoreReasons: [],
       risksToClarify: []
@@ -59,6 +65,8 @@ export class ApplicationService {
     const updated = await this.repo.updateApplication(applicationId, {
       answers,
       stage: "in_review",
+      screeningSignals: null,
+      rankResult: null,
       score: ranking.score,
       scoreReasons: ranking.scoreReasons,
       risksToClarify: ranking.risksToClarify

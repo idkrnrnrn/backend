@@ -1,3 +1,5 @@
+import type { FrontendVacancyWeights } from "../frontend/contracts.js";
+
 export const ACCESS_COOKIE_NAME = "hr_access_token";
 
 export const candidateTones = ["zoomer", "boomer", "neutral"] as const;
@@ -27,6 +29,13 @@ export type Vacancy = {
   id: string;
   title: string;
   description: string;
+  responsibilities: string;
+  mustHaves: string;
+  niceToHaves: string;
+  stopFactors: string;
+  conditions: string;
+  weights: FrontendVacancyWeights;
+  status: "Active" | "Closed";
   location: string;
   role: string;
   mandatoryRequirements: string[];
@@ -45,9 +54,13 @@ export type Application = {
   candidateEmail: string;
   stage: ApplicationStage;
   resumeText: string;
+  resumeFileName: string | null;
+  resumeFileSizeBytes: number | null;
   answers: Record<string, string>;
   candidateProfile: Record<string, unknown> | null;
   clarifyingQuestions: ScreeningQuestion[];
+  screeningSignals: Record<string, unknown> | null;
+  rankResult: Record<string, unknown> | null;
   score: number | null;
   scoreReasons: string[];
   risksToClarify: string[];
