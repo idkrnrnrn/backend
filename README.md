@@ -5,7 +5,8 @@ Production-oriented skeleton of a high-load HR platform with modular microservic
 ## Services
 
 - `hr-core`: HR auth, vacancies + applications lifecycle, candidate screening orchestration.
-- `llm-screening`: AI service that returns clarifying questions and initial scoring.
+
+The LLM screening service is external to this repository. `hr-core` calls its `/v1/screen` endpoint through `HR_LLM_BASE_URL`.
 
 ## Quick start
 
@@ -16,7 +17,6 @@ docker compose up --build
 Then open:
 
 - HR Core API: http://localhost:8888/docs
-- LLM Screening API: http://localhost:8001/docs
 
 ## Authentication
 
@@ -35,6 +35,13 @@ Default invite code (for local): `HR-INVITE-2026`.
 
 1. HR creates vacancy in `hr-core`.
 2. Candidate submits application with resume text.
-3. `hr-core` calls `llm-screening`.
+3. `hr-core` calls the external LLM screening service.
 4. Candidate receives clarifying questions (stubbed notifier), application gets score/reasons/risks.
 5. HR tracks application stage (`chat_not_joined`, `questions_unanswered`, `in_review`, etc.).
+
+## Tests
+
+```bash
+python3 -m pip install -r requirements-dev.txt
+python3 -m pytest -c tests/pytest.ini tests
+```

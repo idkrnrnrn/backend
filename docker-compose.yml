@@ -5,7 +5,7 @@ services:
       dockerfile: services/hr-core/Dockerfile
     environment:
       HR_DATABASE_URL: postgresql+psycopg://postgres:postgres@postgres:5432/hr
-      HR_LLM_BASE_URL: http://llm-screening:8001
+      HR_LLM_BASE_URL: http://host.docker.internal:8001
       HR_INVITE_CODE: HR-INVITE-2026
       HR_JWT_SECRET: local-dev-secret
       HR_COOKIE_SECURE: "false"
@@ -14,15 +14,6 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-      llm-screening:
-        condition: service_started
-
-  llm-screening:
-    build:
-      context: .
-      dockerfile: services/llm-screening/Dockerfile
-    ports:
-      - "8001:8001"
 
   postgres:
     image: postgres:16

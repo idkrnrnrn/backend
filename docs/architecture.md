@@ -58,7 +58,7 @@
 - Vacancy catalog (shared for all authenticated HR)
 - Applications state machine
 - LLM orchestration trigger
-3. **llm-screening service** (implemented skeleton)
+3. **llm-screening service** (external service, owned by another team)
 - Resume analysis
 - Clarifying questions generation
 - Initial score and risk reasons

@@ -47,9 +47,8 @@ def login(payload: HRLoginRequest, response: Response, db: Session = Depends(get
 
 
 @auth_router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
-def logout(response: Response) -> Response:
+def logout(response: Response) -> None:
     response.delete_cookie(key=ACCESS_COOKIE_NAME)
-    return response
 
 
 @auth_router.get("/me", response_model=HRUserRead)
@@ -59,7 +58,9 @@ def me(current_user: HRUser = Depends(get_current_hr)) -> HRUser:
 
 @router.post("/vacancies", response_model=VacancyRead, status_code=status.HTTP_201_CREATED)
 def create_vacancy(payload: VacancyCreate, db: Session = Depends(get_db)) -> Vacancy:
-    vacancy = Vacancy(**payload.model_dump(), apply_url=str(payload.apply_url))
+    vacancy_data = payload.model_dump()
+    vacancy_data["apply_url"] = str(payload.apply_url)
+    vacancy = Vacancy(**vacancy_data)
     db.add(vacancy)
     db.commit()
     db.refresh(vacancy)
