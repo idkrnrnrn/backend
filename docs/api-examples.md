@@ -3,7 +3,7 @@
 ## Create vacancy
 
 ```bash
-curl -X POST http://localhost:8000/api/v1/vacancies \
+curl -X POST http://localhost:8888/api/v1/vacancies \
   -H "Content-Type: application/json" \
   -d '{
     "title": "Senior Python Engineer",
@@ -21,7 +21,7 @@ curl -X POST http://localhost:8000/api/v1/vacancies \
 ## Create application
 
 ```bash
-curl -X POST http://localhost:8000/api/v1/applications \
+curl -X POST http://localhost:8888/api/v1/applications \
   -H "Content-Type: application/json" \
   -d '{
     "vacancy_id": "<VACANCY_ID>",
@@ -41,7 +41,7 @@ Response includes:
 ## Submit answers to clarifying questions
 
 ```bash
-curl -X PATCH http://localhost:8000/api/v1/applications/<APPLICATION_ID>/answers \
+curl -X PATCH http://localhost:8888/api/v1/applications/<APPLICATION_ID>/answers \
   -H "Content-Type: application/json" \
   -d '{
     "answers": {

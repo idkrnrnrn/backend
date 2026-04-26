@@ -15,7 +15,7 @@ docker compose up --build
 
 Then open:
 
-- HR Core API: http://localhost:8000/docs
+- HR Core API: http://localhost:8888/docs
 - LLM Screening API: http://localhost:8001/docs
 
 ## Main flow

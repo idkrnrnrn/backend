@@ -7,7 +7,7 @@ services:
       HR_DATABASE_URL: postgresql+psycopg://postgres:postgres@postgres:5432/hr
       HR_LLM_BASE_URL: http://llm-screening:8001
     ports:
-      - "8000:8000"
+      - "8888:8000"
     depends_on:
       postgres:
         condition: service_healthy
