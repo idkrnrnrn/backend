@@ -6,6 +6,7 @@ export type AppConfig = {
   cookieSecure: boolean;
   llmBaseUrl: string;
   databaseUrl: string;
+  frontendGuestMode: boolean;
 };
 
 export function loadConfig(overrides: Partial<AppConfig> = {}): AppConfig {
@@ -17,6 +18,7 @@ export function loadConfig(overrides: Partial<AppConfig> = {}): AppConfig {
     cookieSecure: (process.env.HR_COOKIE_SECURE ?? "false").toLowerCase() === "true",
     llmBaseUrl: process.env.HR_LLM_BASE_URL ?? "http://127.0.0.1:3000",
     databaseUrl: process.env.HR_DATABASE_URL ?? "postgresql://postgres:postgres@localhost:5432/hr",
+    frontendGuestMode: (process.env.HR_FRONTEND_GUEST_MODE ?? "false").toLowerCase() === "true",
     ...overrides
   };
 }

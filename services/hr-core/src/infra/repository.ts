@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { Pool } from "pg";
+import { buildFrontendVacancyFromLegacy } from "../domain/frontend.js";
 import type { Application, HRUser, ScreeningQuestion, Vacancy } from "../domain/types.js";
 
 export interface Repository {
@@ -18,7 +19,7 @@ export interface Repository {
 }
 
 const seededVacancies: Vacancy[] = [
-  {
+  buildFrontendVacancyFromLegacy({
     id: "11111111-1111-4111-8111-111111111111",
     title: "Старший Python-разработчик",
     description:
@@ -33,8 +34,8 @@ const seededVacancies: Vacancy[] = [
     applyUrl: "https://nl.ourelephant.ru/jobs/python-senior",
     createdAt: "2026-01-10T08:00:00.000Z",
     updatedAt: "2026-01-10T08:00:00.000Z"
-  },
-  {
+  }),
+  buildFrontendVacancyFromLegacy({
     id: "22222222-2222-4222-8222-222222222222",
     title: "Фронтенд-разработчик",
     description:
@@ -49,8 +50,8 @@ const seededVacancies: Vacancy[] = [
     applyUrl: "https://nl.ourelephant.ru/jobs/frontend-middle",
     createdAt: "2026-01-11T09:30:00.000Z",
     updatedAt: "2026-01-11T09:30:00.000Z"
-  },
-  {
+  }),
+  buildFrontendVacancyFromLegacy({
     id: "33333333-3333-4333-8333-333333333333",
     title: "DevOps-инженер",
     description:
@@ -65,7 +66,7 @@ const seededVacancies: Vacancy[] = [
     applyUrl: "https://nl.ourelephant.ru/jobs/devops-engineer",
     createdAt: "2026-01-12T07:45:00.000Z",
     updatedAt: "2026-01-12T07:45:00.000Z"
-  }
+  })
 ];
 
 const seededApplications: Application[] = [
@@ -76,6 +77,8 @@ const seededApplications: Application[] = [
     stage: "in_review",
     resumeText:
       "Python backend-разработчик с 6 годами опыта в финтехе. Разрабатывала сервисы на FastAPI, оптимизировала запросы PostgreSQL и запускала асинхронные пайплайны обработки данных.",
+    resumeFileName: "alina-petrenko.pdf",
+    resumeFileSizeBytes: 402113,
     answers: {
       q1: "Вела миграцию с монолита на сервисную архитектуру без простоя.",
       q2: "Работала с Kubernetes в production около трех лет."
@@ -98,6 +101,8 @@ const seededApplications: Application[] = [
         type: "free_text"
       }
     ],
+    screeningSignals: null,
+    rankResult: { finalScore: 84 },
     score: 84,
     scoreReasons: ["Сильный backend-опыт", "Подтверждена работа с PostgreSQL"],
     risksToClarify: ["Уточнить уровень разговорного английского"],
@@ -111,6 +116,8 @@ const seededApplications: Application[] = [
     stage: "questions_sent",
     resumeText:
       "Frontend-разработчик с 4 годами опыта в React и TypeScript. Фокусируется на доступности, производительности и создании переиспользуемых UI-компонентов.",
+    resumeFileName: "mark-richter.pdf",
+    resumeFileSizeBytes: 318441,
     answers: {},
     candidateProfile: {
       seniority: "middle",
@@ -130,6 +137,8 @@ const seededApplications: Application[] = [
         type: "free_text"
       }
     ],
+    screeningSignals: null,
+    rankResult: { finalScore: 76 },
     score: 76,
     scoreReasons: ["Уверенный React/TypeScript профиль", "Хороший фокус на пользовательском опыте"],
     risksToClarify: ["Проверить практический опыт с Next.js"],
@@ -143,6 +152,8 @@ const seededApplications: Application[] = [
     stage: "interview",
     resumeText:
       "DevOps-инженер с 8 годами опыта в AWS, Terraform и автоматизации CI/CD. Разворачивал стек наблюдаемости на Prometheus и Grafana и строил процессы эксплуатации production.",
+    resumeFileName: "dmitry-sokolov.pdf",
+    resumeFileSizeBytes: 510245,
     answers: {
       q1: "Собрал переиспользуемые Terraform-модули для 20+ команд.",
       q2: "Проектировал дашборды и алерты для инцидент-менеджмента."
@@ -165,6 +176,8 @@ const seededApplications: Application[] = [
         type: "free_text"
       }
     ],
+    screeningSignals: null,
+    rankResult: { finalScore: 89 },
     score: 89,
     scoreReasons: ["Сильный DevOps/SRE опыт", "Хорошая экспертиза в observability"],
     risksToClarify: ["Проверить готовность к ночным on-call сменам"],
@@ -291,6 +304,13 @@ export class PostgresRepository implements Repository {
         id UUID PRIMARY KEY,
         title TEXT NOT NULL,
         description TEXT NOT NULL,
+        responsibilities TEXT NOT NULL DEFAULT '',
+        must_haves TEXT NOT NULL DEFAULT '',
+        nice_to_haves TEXT NOT NULL DEFAULT '',
+        stop_factors TEXT NOT NULL DEFAULT '',
+        conditions TEXT NOT NULL DEFAULT '',
+        weights JSONB NOT NULL DEFAULT '{"experience":30,"skills":25,"schedule":10,"location":10,"motivation":10,"readiness":10,"communication":5}',
+        status TEXT NOT NULL DEFAULT 'Active',
         location TEXT NOT NULL,
         role TEXT NOT NULL,
         mandatory_requirements JSONB NOT NULL,
@@ -309,9 +329,13 @@ export class PostgresRepository implements Repository {
         candidate_email TEXT NOT NULL,
         stage TEXT NOT NULL,
         resume_text TEXT NOT NULL,
+        resume_file_name TEXT NULL,
+        resume_file_size_bytes INTEGER NULL,
         answers JSONB NOT NULL,
         candidate_profile JSONB NULL,
         clarifying_questions JSONB NOT NULL,
+        screening_signals JSONB NULL,
+        rank_result JSONB NULL,
         score DOUBLE PRECISION NULL,
         score_reasons JSONB NOT NULL,
         risks_to_clarify JSONB NOT NULL,
@@ -326,8 +350,63 @@ export class PostgresRepository implements Repository {
     `);
 
     await this.pool.query(`
+      ALTER TABLE vacancies
+      ADD COLUMN IF NOT EXISTS responsibilities TEXT NOT NULL DEFAULT '';
+    `);
+
+    await this.pool.query(`
+      ALTER TABLE vacancies
+      ADD COLUMN IF NOT EXISTS must_haves TEXT NOT NULL DEFAULT '';
+    `);
+
+    await this.pool.query(`
+      ALTER TABLE vacancies
+      ADD COLUMN IF NOT EXISTS nice_to_haves TEXT NOT NULL DEFAULT '';
+    `);
+
+    await this.pool.query(`
+      ALTER TABLE vacancies
+      ADD COLUMN IF NOT EXISTS stop_factors TEXT NOT NULL DEFAULT '';
+    `);
+
+    await this.pool.query(`
+      ALTER TABLE vacancies
+      ADD COLUMN IF NOT EXISTS conditions TEXT NOT NULL DEFAULT '';
+    `);
+
+    await this.pool.query(`
+      ALTER TABLE vacancies
+      ADD COLUMN IF NOT EXISTS weights JSONB NOT NULL DEFAULT '{"experience":30,"skills":25,"schedule":10,"location":10,"motivation":10,"readiness":10,"communication":5}';
+    `);
+
+    await this.pool.query(`
+      ALTER TABLE vacancies
+      ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'Active';
+    `);
+
+    await this.pool.query(`
       ALTER TABLE applications
       ADD COLUMN IF NOT EXISTS candidate_profile JSONB NULL;
+    `);
+
+    await this.pool.query(`
+      ALTER TABLE applications
+      ADD COLUMN IF NOT EXISTS resume_file_name TEXT NULL;
+    `);
+
+    await this.pool.query(`
+      ALTER TABLE applications
+      ADD COLUMN IF NOT EXISTS resume_file_size_bytes INTEGER NULL;
+    `);
+
+    await this.pool.query(`
+      ALTER TABLE applications
+      ADD COLUMN IF NOT EXISTS screening_signals JSONB NULL;
+    `);
+
+    await this.pool.query(`
+      ALTER TABLE applications
+      ADD COLUMN IF NOT EXISTS rank_result JSONB NULL;
     `);
 
     const vacancyCount = Number((await this.pool.query("SELECT COUNT(*)::int AS count FROM vacancies")).rows[0].count);
@@ -443,13 +522,17 @@ export class PostgresRepository implements Repository {
            candidate_email = $3,
            stage = $4,
            resume_text = $5,
-           answers = $6,
-           candidate_profile = $7,
-           clarifying_questions = $8,
-           score = $9,
-           score_reasons = $10,
-           risks_to_clarify = $11,
-           updated_at = $12
+           resume_file_name = $6,
+           resume_file_size_bytes = $7,
+           answers = $8,
+           candidate_profile = $9,
+           clarifying_questions = $10,
+           screening_signals = $11,
+           rank_result = $12,
+           score = $13,
+           score_reasons = $14,
+           risks_to_clarify = $15,
+           updated_at = $16
        WHERE id = $1`,
       [
         updated.id,
@@ -457,9 +540,13 @@ export class PostgresRepository implements Repository {
         updated.candidateEmail,
         updated.stage,
         updated.resumeText,
+        updated.resumeFileName,
+        updated.resumeFileSizeBytes,
         JSON.stringify(updated.answers),
         updated.candidateProfile === null ? null : JSON.stringify(updated.candidateProfile),
         JSON.stringify(updated.clarifyingQuestions),
+        updated.screeningSignals === null ? null : JSON.stringify(updated.screeningSignals),
+        updated.rankResult === null ? null : JSON.stringify(updated.rankResult),
         updated.score,
         JSON.stringify(updated.scoreReasons),
         JSON.stringify(updated.risksToClarify),
@@ -473,14 +560,22 @@ export class PostgresRepository implements Repository {
   private async insertVacancy(vacancy: Vacancy): Promise<void> {
     await this.pool.query(
       `INSERT INTO vacancies (
-         id, title, description, location, role, mandatory_requirements, optional_requirements,
+         id, title, description, responsibilities, must_haves, nice_to_haves, stop_factors,
+         conditions, weights, status, location, role, mandatory_requirements, optional_requirements,
          work_schedule, salary_format, candidate_tone, apply_url, created_at, updated_at
-       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
        ON CONFLICT (id) DO NOTHING`,
       [
         vacancy.id,
         vacancy.title,
         vacancy.description,
+        vacancy.responsibilities,
+        vacancy.mustHaves,
+        vacancy.niceToHaves,
+        vacancy.stopFactors,
+        vacancy.conditions,
+        JSON.stringify(vacancy.weights),
+        vacancy.status,
         vacancy.location,
         vacancy.role,
         JSON.stringify(vacancy.mandatoryRequirements),
@@ -498,9 +593,9 @@ export class PostgresRepository implements Repository {
   private async insertApplication(application: Application): Promise<void> {
     await this.pool.query(
       `INSERT INTO applications (
-         id, vacancy_id, candidate_email, stage, resume_text, answers,
-         candidate_profile, clarifying_questions, score, score_reasons, risks_to_clarify, created_at, updated_at
-       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+         id, vacancy_id, candidate_email, stage, resume_text, resume_file_name, resume_file_size_bytes, answers,
+         candidate_profile, clarifying_questions, screening_signals, rank_result, score, score_reasons, risks_to_clarify, created_at, updated_at
+       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
        ON CONFLICT (id) DO NOTHING`,
       [
         application.id,
@@ -508,9 +603,13 @@ export class PostgresRepository implements Repository {
         application.candidateEmail,
         application.stage,
         application.resumeText,
+        application.resumeFileName,
+        application.resumeFileSizeBytes,
         JSON.stringify(application.answers),
         application.candidateProfile === null ? null : JSON.stringify(application.candidateProfile),
         JSON.stringify(application.clarifyingQuestions),
+        application.screeningSignals === null ? null : JSON.stringify(application.screeningSignals),
+        application.rankResult === null ? null : JSON.stringify(application.rankResult),
         application.score,
         JSON.stringify(application.scoreReasons),
         JSON.stringify(application.risksToClarify),
@@ -536,6 +635,21 @@ function mapVacancyRow(row: Record<string, unknown>): Vacancy {
     id: String(row.id),
     title: String(row.title),
     description: String(row.description),
+    responsibilities: String(row.responsibilities ?? ""),
+    mustHaves: String(row.must_haves ?? ""),
+    niceToHaves: String(row.nice_to_haves ?? ""),
+    stopFactors: String(row.stop_factors ?? ""),
+    conditions: String(row.conditions ?? ""),
+    weights: (row.weights as Vacancy["weights"]) ?? {
+      experience: 30,
+      skills: 25,
+      schedule: 10,
+      location: 10,
+      motivation: 10,
+      readiness: 10,
+      communication: 5
+    },
+    status: (row.status as Vacancy["status"]) ?? "Active",
     location: String(row.location),
     role: String(row.role),
     mandatoryRequirements: row.mandatory_requirements as string[],
@@ -556,9 +670,16 @@ function mapApplicationRow(row: Record<string, unknown>): Application {
     candidateEmail: String(row.candidate_email),
     stage: row.stage as Application["stage"],
     resumeText: String(row.resume_text),
+    resumeFileName: row.resume_file_name ? String(row.resume_file_name) : null,
+    resumeFileSizeBytes:
+      row.resume_file_size_bytes === null || row.resume_file_size_bytes === undefined
+        ? null
+        : Number(row.resume_file_size_bytes),
     answers: row.answers as Record<string, string>,
     candidateProfile: (row.candidate_profile as Record<string, unknown> | null) ?? null,
     clarifyingQuestions: row.clarifying_questions as ScreeningQuestion[],
+    screeningSignals: (row.screening_signals as Record<string, unknown> | null) ?? null,
+    rankResult: (row.rank_result as Record<string, unknown> | null) ?? null,
     score: row.score === null ? null : Number(row.score),
     scoreReasons: row.score_reasons as string[],
     risksToClarify: row.risks_to_clarify as string[],

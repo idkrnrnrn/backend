@@ -1,4 +1,8 @@
 import { z } from "zod";
+import {
+  collapseFrontendWeightsToAgentiki,
+  splitMultilineField
+} from "../frontend/contracts.js";
 import type { AppConfig } from "../config/env.js";
 import type {
   PrepareScreeningRequest,
@@ -91,19 +95,20 @@ function presentVacancyForLLM(vacancy: PrepareScreeningRequest["vacancy"]) {
     id: vacancy.id,
     title: vacancy.title,
     description: vacancy.description,
-    mustHave: vacancy.mandatoryRequirements,
-    niceToHave: vacancy.optionalRequirements,
-    responsibilities: [],
+    mustHave:
+      splitMultilineField(vacancy.mustHaves).length > 0
+        ? splitMultilineField(vacancy.mustHaves)
+        : vacancy.mandatoryRequirements,
+    niceToHave:
+      splitMultilineField(vacancy.niceToHaves).length > 0
+        ? splitMultilineField(vacancy.niceToHaves)
+        : vacancy.optionalRequirements,
+    responsibilities: splitMultilineField(vacancy.responsibilities),
     schedule: vacancy.workSchedule,
     location: vacancy.location,
     salary: vacancy.salaryFormat,
-    weights: {
-      experience: 0.25,
-      skills: 0.3,
-      schedule: 0.3,
-      motivation: 0.15
-    },
-    dealBreakers: []
+    weights: collapseFrontendWeightsToAgentiki(vacancy.weights),
+    dealBreakers: splitMultilineField(vacancy.stopFactors)
   };
 }
 

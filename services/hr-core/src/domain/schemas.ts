@@ -33,7 +33,7 @@ export const applicationCreateSchema = z.object({
 });
 
 export const answersUpdateSchema = z.object({
-  answers: z.record(z.string())
+  answers: z.record(z.string(), z.string())
 });
 
 export const stageUpdateSchema = z.object({
